@@ -1,7 +1,7 @@
 mod parser;
 
 fn main() {
-    let cs: Vec<char> = "hello, world!".chars().collect();
+    let cs: Vec<char> = "hellooo, world!".chars().collect();
 
     let parser = parser::satisfy(|&ch| ch == 'h')
         .then(|_| parser::satisfy(|&ch| ch == 'e'))
@@ -12,10 +12,11 @@ fn main() {
                 parser::satisfy(|&ch| ch == 'j'),
             ])
         })
-        .then(|_| parser::satisfy(|&ch| ch == 'l'));
+        .then(|_| parser::satisfy(|&ch| ch == 'l'))
+        .then(|_| parser::many(parser::satisfy(|&ch| ch == 'o')));
 
     match parser.run(&cs) {
-        Ok(a) => println!("succes: {}", a),
+        Ok(a) => println!("succes: {:?}", a),
         Err(e) => match e {
             parser::ParseFailure::Eof(state) => println!("{:?}", state),
             parser::ParseFailure::UnexpectedChar(ch, state) => println!("{} {:?}", ch, state),

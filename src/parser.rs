@@ -81,12 +81,12 @@ where
     })
 }
 
-pub fn choice<'a, T>(parsers: Vec<Parser<'a, T>>) -> Parser<'a, T>
+pub fn choice<'a, T>(options: Vec<Parser<'a, T>>) -> Parser<'a, T>
 where
     T: 'a,
 {
     Parser::new(move |state| {
-        for parser in &parsers {
+        for parser in &options {
             match (parser.fun)(state) {
                 Ok(v) => return Ok(v),
                 Err(_) => continue,
@@ -96,11 +96,22 @@ where
     })
 }
 
+pub fn many<'a, T>(parser: Parser<'a, T>) -> Parser<'a, Vec<T>>
+where
+    T: 'a,
+{
+    Parser::new(move |mut state| {
+        let mut acc = Vec::new();
+        while let Ok((v, new_state)) = (parser.fun)(state) {
+            acc.push(v);
+            state = new_state;
+        }
+
+        Ok((acc, state))
+    })
+}
+
 /*
-pub fn choice()
-
-pub fn many()
-
 pub fn many1()
 
 pub fn pchar()
