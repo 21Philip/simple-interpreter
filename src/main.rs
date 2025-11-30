@@ -13,7 +13,8 @@ fn main() {
             ])
         })
         .then(|_| parser::satisfy(|&ch| ch == 'l'))
-        .then(|_| parser::many(parser::satisfy(|&ch| ch == 'o')));
+        .then(|_| parser::many(parser::satisfy(|&ch| ch == 'o')))
+        .into(String::from_iter);
 
     match parser.run(&cs) {
         Ok(a) => println!("succes: {:?}", a),

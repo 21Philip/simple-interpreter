@@ -55,6 +55,18 @@ impl<'a, T> Parser<'a, T> {
         })
     }
 
+    pub fn into<U, F>(self, f: F) -> Parser<'a, U>
+    where
+        F: Fn(T) -> U + 'a,
+        T: 'a,
+        U: 'a,
+    {
+        Parser::new(move |state| {
+            let (value, new_state) = (self.fun)(state)?;
+            Ok((f(value), new_state))
+        })
+    }
+
     pub fn run(self, input: &'a [char]) -> Result<T, ParseFailure<'a>> {
         let tis = TextInputState::new(input, 0);
         match (self.fun)(tis) {
@@ -106,7 +118,6 @@ where
             acc.push(v);
             state = new_state;
         }
-
         Ok((acc, state))
     })
 }
