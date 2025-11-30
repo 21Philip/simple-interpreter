@@ -14,7 +14,7 @@ fn main() {
         .and(parser::many(parser::satisfy(|&ch| ch == 'o')))
         .into(|result| {
             let (ch, chs) = result;
-            let s: String = std::iter::once(ch).chain(chs.iter().copied()).collect();
+            let s: String = std::iter::once(ch).chain(chs.into_iter()).collect();
             s
         });
 

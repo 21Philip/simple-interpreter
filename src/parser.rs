@@ -95,7 +95,7 @@ impl<'a, T> Parser<'a, T> {
     pub fn run(self, input: &'a [char]) -> Result<T, ParseFailure<'a>> {
         let tis = TextInputState::new(input, 0);
         match (self.fun)(tis) {
-            Ok((a, _)) => Ok(a),
+            Ok((value, _)) => Ok(value),
             Err(e) => Err(e),
         }
     }
@@ -146,9 +146,17 @@ where
     })
 }
 
-/*
-pub fn many1()
+pub fn many1<'a, T>(parser: Parser<'a, T>) -> Parser<'a, Vec<T>>
+where
+    T: 'a,
+{
+    parser.and(many(parser)).into(|result| {
+        let (first, rest) = result;
+        std::iter::once(first).chain(rest.into_iter()).collect()
+    })
+}
 
+/*
 pub fn pchar()
 
 pub fn pstring()
