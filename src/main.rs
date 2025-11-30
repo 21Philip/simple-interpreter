@@ -1,7 +1,5 @@
 mod parser;
 
-fn test()
-
 fn main() {
-    
+    let is = parser::
 }

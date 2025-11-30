@@ -11,8 +11,8 @@ impl<'a> TextInputState<'a> {
         }
     }
 
-    fn next_char(self) -> (Option<&'a char>, TextInputState<'a>) {
-        let opt = self.text.get(self.position);
+    fn next_char(self) -> (Option<char>, TextInputState<'a>) {
+        let opt = self.text.get(self.position).copied();
         match opt {
             Some(c) => (Some(c), TextInputState::new(self.text, self.position + 1)),
             _ => (None, TextInputState::new(self.text, self.position)),
@@ -57,17 +57,17 @@ impl<'a, T> Parser<'a, T> {
 /* Basic Parsers */
 
 // checks next char
-pub fn satisfy(predicate: F) -> Parser<&char>
+pub fn satisfy<'a, F>(predicate: F) -> Parser<'a, char>
 where
-    F: Fn(char) -> bool,
+    F: Fn(&char) -> bool + 'a,
 {
     Parser::new(move |state| {
         let (c, new_state) = state.next_char();
         match c {
             None => Err(ParseFailure::EOF(new_state)),
-            Some(c) if predicate(c) => Ok((c, new_state)),
+            Some(c) if predicate(&c) => Ok((c, new_state)),
             Some(c) => Err(ParseFailure::UnexpectedChar(
-                format!("got unexpected char {c}"),
+                format!("got unexpected char {c} at position {}", new_state.position),
                 new_state,
             )),
         }
