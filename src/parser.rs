@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 #[derive(Debug, Copy, Clone)]
 pub struct TextInputState<'a> {
     text: &'a [char],
@@ -30,7 +32,15 @@ pub enum ParseFailure<'a> {
 type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure<'a>>;
 
 pub struct Parser<'a, T> {
-    fun: Box<dyn Fn(TextInputState<'a>) -> ParseResult<'a, T> + 'a>,
+    fun: Rc<dyn Fn(TextInputState<'a>) -> ParseResult<'a, T> + 'a>,
+}
+
+impl<'a, T> Clone for Parser<'a, T> {
+    fn clone(&self) -> Self {
+        Parser {
+            fun: Rc::clone(&self.fun),
+        }
+    }
 }
 
 impl<'a, T> Parser<'a, T> {
@@ -39,15 +49,16 @@ impl<'a, T> Parser<'a, T> {
         F: Fn(TextInputState<'a>) -> ParseResult<'a, T> + 'a,
         T: 'a,
     {
-        Parser { fun: Box::new(f) }
+        Parser { fun: Rc::new(f) }
     }
 
     // Discards result from previous parser
-    pub fn then<U>(self, next: Parser<'a, U>) -> Parser<'a, U>
+    pub fn then<U>(self, next: &Parser<'a, U>) -> Parser<'a, U>
     where
         T: 'a,
         U: 'a,
     {
+        let next = next.clone();
         Parser::new(move |state| {
             let (_, new_state) = (self.fun)(state)?;
             (next.fun)(new_state)
@@ -55,11 +66,12 @@ impl<'a, T> Parser<'a, T> {
     }
 
     // Discards result from next parser
-    pub fn before<U>(self, next: Parser<'a, U>) -> Parser<'a, T>
+    pub fn before<U>(self, next: &Parser<'a, U>) -> Parser<'a, T>
     where
         T: 'a,
         U: 'a,
     {
+        let next = next.clone();
         Parser::new(move |state| {
             let (value, new_state) = (self.fun)(state)?;
             let (_, new_state) = (next.fun)(new_state)?;
@@ -68,11 +80,12 @@ impl<'a, T> Parser<'a, T> {
     }
 
     // Keeps results from both prevoius and next parser
-    pub fn and<U>(self, next: Parser<'a, U>) -> Parser<'a, (T, U)>
+    pub fn and<U>(self, next: &Parser<'a, U>) -> Parser<'a, (T, U)>
     where
         T: 'a,
         U: 'a,
     {
+        let next = next.clone();
         Parser::new(move |state| {
             let (value1, new_state) = (self.fun)(state)?;
             let (value2, new_state) = (next.fun)(new_state)?;
@@ -80,7 +93,8 @@ impl<'a, T> Parser<'a, T> {
         })
     }
 
-    pub fn into<U, F>(self, f: F) -> Parser<'a, U>
+    // Maps the result of a parser by a given function
+    pub fn map<U, F>(self, f: F) -> Parser<'a, U>
     where
         F: Fn(T) -> U + 'a,
         T: 'a,
@@ -92,6 +106,7 @@ impl<'a, T> Parser<'a, T> {
         })
     }
 
+    // Runs parser on given input and returns result
     pub fn run(self, input: &'a [char]) -> Result<T, ParseFailure<'a>> {
         let tis = TextInputState::new(input, 0);
         match (self.fun)(tis) {
@@ -101,7 +116,11 @@ impl<'a, T> Parser<'a, T> {
     }
 }
 
-/* Basic Parsers */
+/* Essiential builders:
+ * These builders can only be implemented through private internal logic.
+ * They are the building blocks for all other parsers. Due to this they
+ * take ownership of any passed parser.
+ */
 
 pub fn satisfy<'a, F>(predicate: F) -> Parser<'a, char>
 where
@@ -146,13 +165,19 @@ where
     })
 }
 
-pub fn many1<'a, T>(parser: Parser<'a, T>) -> Parser<'a, Vec<T>>
+/* Convinience parsers:
+ * Basic parsers to save the user from implementing trivial logic
+ * themselves. Are all combinations of the essiential builders.
+ * Does not take ownership.
+ */
+
+pub fn many1<'a, T>(parser: &Parser<'a, T>) -> Parser<'a, Vec<T>>
 where
     T: 'a,
 {
-    parser.and(many(parser)).into(|result| {
+    parser.clone().and(&many(parser.clone())).map(|result| {
         let (first, rest) = result;
-        std::iter::once(first).chain(rest.into_iter()).collect()
+        std::iter::once(first).chain(rest).collect()
     })
 }
 

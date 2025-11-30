@@ -3,20 +3,14 @@ mod parser;
 fn main() {
     let cs: Vec<char> = "hellooo, world!".chars().collect();
 
+    let subparser = parser::satisfy(|_| true).and(&parser::satisfy(|_| true));
+
     let parser = parser::satisfy(|&ch| ch == 'h')
-        .then(parser::satisfy(|&ch| ch == 'e'))
-        .before(parser::choice(vec![
-            parser::satisfy(|&ch| ch == 'k'),
-            parser::satisfy(|&ch| ch == 'l'),
-            parser::satisfy(|&ch| ch == 'j'),
-        ]))
-        .before(parser::satisfy(|&ch| ch == 'l'))
-        .and(parser::many(parser::satisfy(|&ch| ch == 'o')))
-        .into(|result| {
-            let (ch, chs) = result;
-            let s: String = std::iter::once(ch).chain(chs.into_iter()).collect();
-            s
-        });
+        .then(&parser::satisfy(|&ch| ch == 'e'))
+        .then(&subparser)
+        .then(&parser::satisfy(|&ch| ch == 'o'))
+        .then(&subparser);
+    //.then(&many1(parser))
 
     match parser.run(&cs) {
         Ok(a) => println!("success: {:?}", a),
