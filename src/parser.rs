@@ -1,10 +1,10 @@
-struct TextInputState<'a> {
+pub struct TextInputState<'a> {
     text: &'a [char],
     position: usize,
 }
 
 impl<'a> TextInputState<'a> {
-    fn new(input: &'a [char], pos: usize) -> TextInputState<'a> {
+    pub fn new(input: &'a [char], pos: usize) -> TextInputState<'a> {
         TextInputState {
             text: input,
             position: pos,
@@ -51,6 +51,15 @@ impl<'a, T> Parser<'a, T> {
             let next_parser = f(value);
             (next_parser.fun)(new_state)
         })
+    }
+
+    // Should take ownership?
+    pub fn run(self, input: &'a [char]) -> Result<T, ParseFailure> {
+        let tis = TextInputState::new(input, 0);
+        match (self.fun)(tis) {
+            Ok((a, _)) => Ok(a),
+            Err(e) => Err(e),
+        }
     }
 }
 
