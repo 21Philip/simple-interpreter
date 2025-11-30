@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct TextInputState<'a> {
     text: &'a [char],
     position: usize,
@@ -24,6 +24,7 @@ impl<'a> TextInputState<'a> {
 pub enum ParseFailure<'a> {
     Eof(TextInputState<'a>),
     UnexpectedChar(char, TextInputState<'a>),
+    OutOfOptions(TextInputState<'a>),
 }
 
 type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure<'a>>;
@@ -77,6 +78,21 @@ where
             Some(ch) if predicate(&ch) => Ok((ch, new_state)),
             Some(ch) => Err(ParseFailure::UnexpectedChar(ch, new_state)),
         }
+    })
+}
+
+pub fn choice<'a, T>(parsers: Vec<Parser<'a, T>>) -> Parser<'a, T>
+where
+    T: 'a,
+{
+    Parser::new(move |state| {
+        for parser in &parsers {
+            match (parser.fun)(state) {
+                Ok(v) => return Ok(v),
+                Err(_) => continue,
+            }
+        }
+        Err(ParseFailure::OutOfOptions(state))
     })
 }
 

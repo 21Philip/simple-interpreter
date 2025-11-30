@@ -5,6 +5,13 @@ fn main() {
 
     let parser = parser::satisfy(|&ch| ch == 'h')
         .then(|_| parser::satisfy(|&ch| ch == 'e'))
+        .then(|_| {
+            parser::choice(vec![
+                parser::satisfy(|&ch| ch == 'k'),
+                parser::satisfy(|&ch| ch == 'l'),
+                parser::satisfy(|&ch| ch == 'j'),
+            ])
+        })
         .then(|_| parser::satisfy(|&ch| ch == 'l'));
 
     match parser.run(&cs) {
@@ -12,6 +19,7 @@ fn main() {
         Err(e) => match e {
             parser::ParseFailure::Eof(state) => println!("{:?}", state),
             parser::ParseFailure::UnexpectedChar(ch, state) => println!("{} {:?}", ch, state),
+            parser::ParseFailure::OutOfOptions(state) => println!("{:?}", state),
         },
     }
 }
