@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-/* Convinience combinators:
+/* Convenience combinators:
  * Basic parsers to save the user from implementing trivial logic
  * themselves. Are all combinations of the essiential builders.
  * Does not take ownership.
@@ -21,4 +21,3 @@ where
 /*
 pub fn pstring()
 */
-

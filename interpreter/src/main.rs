@@ -11,7 +11,8 @@ fn main() {
         .then(&subparser)
         .then(&satisfy(|&ch| ch == 'o'))
         .then(&subparser)
-        .then(&many1(&satisfy(|&ch| ch == ',')));
+        .then(&many1(&satisfy(|&ch| ch == ',')))
+        .map(String::from_iter);
 
     match parser.run(&cs) {
         Ok(a) => println!("success: {:?}", a),
