@@ -3,5 +3,12 @@
 version = 4
 
 [[package]]
-name = "simple-interpreter"
+name = "interpreter"
+version = "0.1.0"
+dependencies = [
+ "lib_parse",
+]
+
+[[package]]
+name = "lib_parse"
 version = "0.1.0"

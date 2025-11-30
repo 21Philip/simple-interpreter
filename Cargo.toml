@@ -1,6 +1,13 @@
-[package]
-name = "simple-interpreter"
-version = "0.1.0"
-edition = "2024"
+[workspace.lints.rust]
+unsafe_code = "forbid"
+# unused = "allow"
 
-[dependencies]
+[workspace]
+resolver = "3"
+members = [
+	"crates/lib-parse",
+	"interpreter"
+]
+
+#[workspace.dependencies]
+#lib-parse = {path = "crates/lib-parse"}
