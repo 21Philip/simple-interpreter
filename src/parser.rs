@@ -42,16 +42,14 @@ impl<'a, T> Parser<'a, T> {
         Parser { fun: Box::new(f) }
     }
 
-    pub fn then<U, F>(self, f: F) -> Parser<'a, U>
+    pub fn then<U>(self, next: Parser<'a, U>) -> Parser<'a, U>
     where
-        F: Fn(T) -> Parser<'a, U> + 'a,
         T: 'a,
         U: 'a,
     {
         Parser::new(move |state| {
-            let (value, new_state) = (self.fun)(state)?;
-            let next_parser = f(value);
-            (next_parser.fun)(new_state)
+            let (_, new_state) = (self.fun)(state)?;
+            (next.fun)(new_state)
         })
     }
 
