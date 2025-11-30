@@ -3,7 +3,9 @@ mod parser;
 fn main() {
     let cs: Vec<char> = "hello, world!".chars().collect();
 
-    let parser = parser::satisfy(|&c| c == 'h').then(|_| parser::satisfy(|&c| c == 'e'));
+    let parser = parser::satisfy(|&c| c == 'h')
+        .then(|_| parser::satisfy(|&c| c == 'e'))
+        .then(|_| parser::satisfy(|&c| c == 'l'));
 
     match parser.run(&cs) {
         Ok(a) => println!("succes: {}", a),

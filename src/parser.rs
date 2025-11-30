@@ -23,7 +23,7 @@ impl<'a> TextInputState<'a> {
 
 pub enum ParseFailure<'a> {
     Eof(TextInputState<'a>),
-    UnexpectedChar(String, TextInputState<'a>),
+    UnexpectedChar(char, TextInputState<'a>),
 }
 
 type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure<'a>>;
@@ -76,10 +76,7 @@ where
         match c {
             None => Err(ParseFailure::Eof(new_state)),
             Some(c) if predicate(&c) => Ok((c, new_state)),
-            Some(c) => Err(ParseFailure::UnexpectedChar(
-                format!("got unexpected char {c} at position {}", new_state.position),
-                new_state,
-            )),
+            Some(c) => Err(ParseFailure::UnexpectedChar(c, new_state)),
         }
     })
 }
