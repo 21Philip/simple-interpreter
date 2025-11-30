@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct TextInputState<'a> {
     text: &'a [char],
     position: usize,
@@ -20,14 +21,14 @@ impl<'a> TextInputState<'a> {
     }
 }
 
-enum ParseFailure<'a> {
-    EOF(TextInputState<'a>),
+pub enum ParseFailure<'a> {
+    Eof(TextInputState<'a>),
     UnexpectedChar(String, TextInputState<'a>),
 }
 
 type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure<'a>>;
 
-struct Parser<'a, T> {
+pub struct Parser<'a, T> {
     fun: Box<dyn Fn(TextInputState<'a>) -> ParseResult<'a, T> + 'a>,
 }
 
@@ -54,7 +55,7 @@ impl<'a, T> Parser<'a, T> {
     }
 
     // Should take ownership?
-    pub fn run(self, input: &'a [char]) -> Result<T, ParseFailure> {
+    pub fn run(self, input: &'a [char]) -> Result<T, ParseFailure<'a>> {
         let tis = TextInputState::new(input, 0);
         match (self.fun)(tis) {
             Ok((a, _)) => Ok(a),
@@ -73,7 +74,7 @@ where
     Parser::new(move |state| {
         let (c, new_state) = state.next_char();
         match c {
-            None => Err(ParseFailure::EOF(new_state)),
+            None => Err(ParseFailure::Eof(new_state)),
             Some(c) if predicate(&c) => Ok((c, new_state)),
             Some(c) => Err(ParseFailure::UnexpectedChar(
                 format!("got unexpected char {c} at position {}", new_state.position),
