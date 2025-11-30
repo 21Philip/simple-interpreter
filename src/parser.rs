@@ -42,6 +42,7 @@ impl<'a, T> Parser<'a, T> {
         Parser { fun: Box::new(f) }
     }
 
+    // Discards result from previous parser
     pub fn then<U>(self, next: Parser<'a, U>) -> Parser<'a, U>
     where
         T: 'a,
@@ -50,6 +51,32 @@ impl<'a, T> Parser<'a, T> {
         Parser::new(move |state| {
             let (_, new_state) = (self.fun)(state)?;
             (next.fun)(new_state)
+        })
+    }
+
+    // Discards result from next parser
+    pub fn before<U>(self, next: Parser<'a, U>) -> Parser<'a, T>
+    where
+        T: 'a,
+        U: 'a,
+    {
+        Parser::new(move |state| {
+            let (value, new_state) = (self.fun)(state)?;
+            let (_, new_state) = (next.fun)(new_state)?;
+            Ok((value, new_state))
+        })
+    }
+
+    // Keeps results from both prevoius and next parser
+    pub fn and<U>(self, next: Parser<'a, U>) -> Parser<'a, (T, U)>
+    where
+        T: 'a,
+        U: 'a,
+    {
+        Parser::new(move |state| {
+            let (value1, new_state) = (self.fun)(state)?;
+            let (value2, new_state) = (next.fun)(new_state)?;
+            Ok(((value1, value2), new_state))
         })
     }
 
@@ -76,7 +103,6 @@ impl<'a, T> Parser<'a, T> {
 
 /* Basic Parsers */
 
-// checks next char
 pub fn satisfy<'a, F>(predicate: F) -> Parser<'a, char>
 where
     F: Fn(&char) -> bool + 'a,
