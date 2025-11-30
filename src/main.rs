@@ -3,15 +3,15 @@ mod parser;
 fn main() {
     let cs: Vec<char> = "hello, world!".chars().collect();
 
-    let parser = parser::satisfy(|&c| c == 'h')
-        .then(|_| parser::satisfy(|&c| c == 'e'))
-        .then(|_| parser::satisfy(|&c| c == 'l'));
+    let parser = parser::satisfy(|&ch| ch == 'h')
+        .then(|_| parser::satisfy(|&ch| ch == 'e'))
+        .then(|_| parser::satisfy(|&ch| ch == 'l'));
 
     match parser.run(&cs) {
         Ok(a) => println!("succes: {}", a),
         Err(e) => match e {
             parser::ParseFailure::Eof(state) => println!("{:?}", state),
-            parser::ParseFailure::UnexpectedChar(c, state) => println!("{} {:?}", c, state),
+            parser::ParseFailure::UnexpectedChar(ch, state) => println!("{} {:?}", ch, state),
         },
     }
 }

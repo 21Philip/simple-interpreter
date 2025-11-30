@@ -5,7 +5,7 @@ pub struct TextInputState<'a> {
 }
 
 impl<'a> TextInputState<'a> {
-    pub fn new(input: &'a [char], pos: usize) -> TextInputState<'a> {
+    fn new(input: &'a [char], pos: usize) -> TextInputState<'a> {
         TextInputState {
             text: input,
             position: pos,
@@ -15,7 +15,7 @@ impl<'a> TextInputState<'a> {
     fn next_char(self) -> (Option<char>, TextInputState<'a>) {
         let opt = self.text.get(self.position).copied();
         match opt {
-            Some(c) => (Some(c), TextInputState::new(self.text, self.position + 1)),
+            Some(ch) => (Some(ch), TextInputState::new(self.text, self.position + 1)),
             _ => (None, TextInputState::new(self.text, self.position)),
         }
     }
@@ -54,7 +54,6 @@ impl<'a, T> Parser<'a, T> {
         })
     }
 
-    // Should take ownership?
     pub fn run(self, input: &'a [char]) -> Result<T, ParseFailure<'a>> {
         let tis = TextInputState::new(input, 0);
         match (self.fun)(tis) {
@@ -72,11 +71,11 @@ where
     F: Fn(&char) -> bool + 'a,
 {
     Parser::new(move |state| {
-        let (c, new_state) = state.next_char();
-        match c {
+        let (opt, new_state) = state.next_char();
+        match opt {
             None => Err(ParseFailure::Eof(new_state)),
-            Some(c) if predicate(&c) => Ok((c, new_state)),
-            Some(c) => Err(ParseFailure::UnexpectedChar(c, new_state)),
+            Some(ch) if predicate(&ch) => Ok((ch, new_state)),
+            Some(ch) => Err(ParseFailure::UnexpectedChar(ch, new_state)),
         }
     })
 }
