@@ -3,7 +3,6 @@ use crate::prelude::*;
 /* Convenience combinators:
  * Basic parsers to save the user from implementing trivial logic
  * themselves. Are all combinations of the essiential builders.
- * Does not take ownership of given parsers.
  */
 
 pub fn many1<'a, T>(parser: &Parser<'a, T>) -> Parser<'a, Vec<T>>
