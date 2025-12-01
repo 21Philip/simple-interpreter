@@ -118,8 +118,7 @@ impl<'a, T> Parser<'a, T> {
 
 /* Base combinators:
  * These builders can only be implemented through private internal logic.
- * They are the building blocks for all other parsers. They take ownership
- * of any passed parser.
+ * They are the building blocks for all other parsers.
  */
 
 pub fn satisfy<'a, F>(predicate: F) -> Parser<'a, char>
@@ -136,10 +135,11 @@ where
     })
 }
 
-pub fn choice<'a, T>(options: Vec<Parser<'a, T>>) -> Parser<'a, T>
+pub fn choice<'a, T>(options: &[Parser<'a, T>]) -> Parser<'a, T>
 where
     T: 'a,
 {
+    let options = options.to_vec();
     Parser::new(move |state| {
         for parser in &options {
             match (parser.fun)(state) {
@@ -151,10 +151,30 @@ where
     })
 }
 
-pub fn many<'a, T>(parser: Parser<'a, T>) -> Parser<'a, Vec<T>>
+pub fn sequence<'a, T>(parsers: &[Parser<'a, T>]) -> Parser<'a, Vec<T>>
 where
     T: 'a,
 {
+    let parsers = parsers.to_vec();
+    Parser::new(move |mut state| {
+        let mut acc = Vec::new();
+
+        for parser in &parsers {
+            let (value, new_state) = (parser.fun)(state)?;
+            acc.push(value);
+            state = new_state;
+        }
+
+        Ok((acc, state))
+    })
+}
+
+pub fn many<'a, T>(parser: &Parser<'a, T>) -> Parser<'a, Vec<T>>
+where
+    T: 'a,
+{
+    let parser = parser.clone();
+
     Parser::new(move |mut state| {
         let mut acc = Vec::new();
         while let Ok((v, new_state)) = (parser.fun)(state) {

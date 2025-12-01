@@ -1,13 +1,14 @@
-use lib_parse::combinators::many1;
+use lib_parse::combinators::*;
 use lib_parse::prelude::*;
 
 fn main() {
     let cs: Vec<char> = "hellooo,,,, world!".chars().collect();
 
     let subparser = satisfy(|_| true).and(&satisfy(|_| true));
+    let subparser2 = pchar('e');
 
     let parser = satisfy(|&ch| ch == 'h')
-        .then(&satisfy(|&ch| ch == 'e'))
+        .then(&subparser2)
         .then(&subparser)
         .then(&satisfy(|&ch| ch == 'o'))
         .then(&subparser)
