@@ -20,12 +20,12 @@ impl<'a> TextInputState<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParseFailure {
     Eof,
     UnexpectedChar(char),
     OutOfOptions,
-    MapError(),
+    MapError,
 }
 
 type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure>;
@@ -105,7 +105,7 @@ impl<T: 'static> Parser<T> {
             let (value, new_state) = (self.fun)(state)?;
             match f(value) {
                 Ok(v) => Ok((v, new_state)),
-                Err(_) => Err(ParseFailure::MapError()),
+                Err(_) => Err(ParseFailure::MapError),
             }
         })
     }

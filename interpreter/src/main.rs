@@ -16,7 +16,7 @@ fn main() {
             ParseFailure::Eof => println!("eof"),
             ParseFailure::UnexpectedChar(ch) => println!("uexpected '{}'", ch),
             ParseFailure::OutOfOptions => println!("out of options"),
-            ParseFailure::MapError() => println!("map error"),
+            ParseFailure::MapError => println!("map error"),
         },
     }
 }
