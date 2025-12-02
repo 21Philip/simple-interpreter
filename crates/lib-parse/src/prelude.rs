@@ -31,7 +31,6 @@ pub enum ParseFailure {
 }
 
 type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure>;
-//type Parser<'a, T> = Fn(TextInputState<'a>) -> ParseResult<'a, T>;
 
 pub struct Parser<T> {
     fun: Rc<dyn for<'a> Fn(TextInputState<'a>) -> ParseResult<'a, T>>,
