@@ -13,9 +13,9 @@ fn main() {
     match parser.run(&cs) {
         Ok(a) => println!("success: {:?}", a),
         Err(e) => match e {
-            ParseFailure::Eof(state) => println!("{:?}", state),
-            ParseFailure::UnexpectedChar(ch, state) => println!("{} {:?}", ch, state),
-            ParseFailure::OutOfOptions(state) => println!("{:?}", state),
+            ParseFailure::Eof => println!("eof"),
+            ParseFailure::UnexpectedChar(ch) => println!("uexpected '{}'", ch),
+            ParseFailure::OutOfOptions => println!("out of options"),
         },
     }
 }

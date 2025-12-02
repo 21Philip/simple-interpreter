@@ -104,7 +104,7 @@ impl<T: 'static> Parser<T> {
 }
 
 /* Base combinators:
- * These builders can only be implemented through private internal logic.
+ * These builders are implemented through private internal logic.
  * They are the building blocks for all other parsers.
  */
 
