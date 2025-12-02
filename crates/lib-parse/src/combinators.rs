@@ -5,21 +5,18 @@ use crate::prelude::*;
  * themselves. Are all combinations of the essiential builders.
  */
 
-pub fn many1<'a, T>(parser: &Parser<'a, T>) -> Parser<'a, Vec<T>>
-where
-    T: 'a,
-{
+pub fn many1<T: 'static>(parser: &Parser<T>) -> Parser<Vec<T>> {
     parser.clone().and(&many(parser)).map(|result| {
         let (first, rest) = result;
         std::iter::once(first).chain(rest).collect()
     })
 }
 
-pub fn pchar<'a>(ch: char) -> Parser<'a, char> {
+pub fn pchar(ch: char) -> Parser<char> {
     satisfy(move |&c| c == ch)
 }
 
-pub fn pstring<'a>(s: &str) -> Parser<'a, String> {
-    let parsers: Vec<Parser<'a, char>> = s.chars().map(pchar).collect();
+pub fn pstring(s: &str) -> Parser<String> {
+    let parsers: Vec<Parser<char>> = s.chars().map(pchar).collect();
     sequence(&parsers).map(String::from_iter)
 }

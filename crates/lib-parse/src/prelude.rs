@@ -31,6 +31,7 @@ pub enum ParseFailure {
 }
 
 type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure>;
+//type Parser<'a, T> = Fn(TextInputState<'a>) -> ParseResult<'a, T>;
 
 pub struct Parser<T> {
     fun: Rc<dyn for<'a> Fn(TextInputState<'a>) -> ParseResult<'a, T>>,
@@ -44,16 +45,16 @@ impl<T> Clone for Parser<T> {
     }
 }
 
-impl<T> Parser<T> {
+impl<T: 'static> Parser<T> {
     fn new<F>(f: F) -> Parser<T>
     where
-        F: for<'a> Fn(TextInputState<'a>) -> ParseResult<'a, T>,
+        F: for<'a> Fn(TextInputState<'a>) -> ParseResult<'a, T> + 'static,
     {
         Parser { fun: Rc::new(f) }
     }
 
     // Discards result from previous parser
-    pub fn then<U>(self, next: &Parser<U>) -> Parser<U> {
+    pub fn then<U: 'static>(self, next: &Parser<U>) -> Parser<U> {
         let next = next.clone();
         Parser::new(move |state| {
             let (_, new_state) = (self.fun)(state)?;
@@ -62,7 +63,7 @@ impl<T> Parser<T> {
     }
 
     // Discards result from next parser
-    pub fn before<U>(self, next: &Parser<U>) -> Parser<T> {
+    pub fn before<U: 'static>(self, next: &Parser<U>) -> Parser<T> {
         let next = next.clone();
         Parser::new(move |state| {
             let (value, new_state) = (self.fun)(state)?;
@@ -72,7 +73,7 @@ impl<T> Parser<T> {
     }
 
     // Keeps results from both prevoius and next parser
-    pub fn and<U>(self, next: &Parser<U>) -> Parser<(T, U)> {
+    pub fn and<U: 'static>(self, next: &Parser<U>) -> Parser<(T, U)> {
         let next = next.clone();
         Parser::new(move |state| {
             let (value1, new_state) = (self.fun)(state)?;
@@ -84,7 +85,8 @@ impl<T> Parser<T> {
     // Maps the result of a parser by a given function
     pub fn map<U, F>(self, f: F) -> Parser<U>
     where
-        F: Fn(T) -> U,
+        F: Fn(T) -> U + 'static,
+        U: 'static,
     {
         Parser::new(move |state| {
             let (value, new_state) = (self.fun)(state)?;
@@ -109,7 +111,7 @@ impl<T> Parser<T> {
 
 pub fn satisfy<F>(predicate: F) -> Parser<char>
 where
-    F: Fn(&char) -> bool,
+    F: Fn(&char) -> bool + 'static,
 {
     Parser::new(move |state| {
         let (opt, new_state) = state.next_char();
@@ -121,7 +123,7 @@ where
     })
 }
 
-pub fn choice<T>(options: &[Parser<T>]) -> Parser<T> {
+pub fn choice<T: 'static>(options: &[Parser<T>]) -> Parser<T> {
     let options = options.to_vec();
     Parser::new(move |state| {
         for parser in &options {
@@ -134,7 +136,7 @@ pub fn choice<T>(options: &[Parser<T>]) -> Parser<T> {
     })
 }
 
-pub fn sequence<T>(parsers: &[Parser<T>]) -> Parser<Vec<T>> {
+pub fn sequence<T: 'static>(parsers: &[Parser<T>]) -> Parser<Vec<T>> {
     let parsers = parsers.to_vec();
     Parser::new(move |mut state| {
         let mut acc = Vec::new();
@@ -149,7 +151,7 @@ pub fn sequence<T>(parsers: &[Parser<T>]) -> Parser<Vec<T>> {
     })
 }
 
-pub fn many<T>(parser: &Parser<T>) -> Parser<Vec<T>> {
+pub fn many<T: 'static>(parser: &Parser<T>) -> Parser<Vec<T>> {
     let parser = parser.clone();
 
     Parser::new(move |mut state| {
