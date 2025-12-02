@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 #[derive(Debug, Copy, Clone)]
-pub struct TextInputState<'a> {
+struct TextInputState<'a> {
     text: &'a [char],
     position: usize,
 }
@@ -24,19 +24,19 @@ impl<'a> TextInputState<'a> {
 }
 
 #[derive(Debug)]
-pub enum ParseFailure<'a> {
-    Eof(TextInputState<'a>),
-    UnexpectedChar(char, TextInputState<'a>),
-    OutOfOptions(TextInputState<'a>),
+pub enum ParseFailure {
+    Eof,
+    UnexpectedChar(char),
+    OutOfOptions,
 }
 
-type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure<'a>>;
+type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure>;
 
-pub struct Parser<'a, T> {
-    fun: Rc<dyn Fn(TextInputState<'a>) -> ParseResult<'a, T> + 'a>,
+pub struct Parser<T> {
+    fun: Rc<dyn for<'a> Fn(TextInputState<'a>) -> ParseResult<'a, T>>,
 }
 
-impl<'a, T> Clone for Parser<'a, T> {
+impl<T> Clone for Parser<T> {
     fn clone(&self) -> Self {
         Parser {
             fun: Rc::clone(&self.fun),
@@ -44,21 +44,16 @@ impl<'a, T> Clone for Parser<'a, T> {
     }
 }
 
-impl<'a, T> Parser<'a, T> {
-    fn new<F>(f: F) -> Parser<'a, T>
+impl<T> Parser<T> {
+    fn new<F>(f: F) -> Parser<T>
     where
-        F: Fn(TextInputState<'a>) -> ParseResult<'a, T> + 'a,
-        T: 'a,
+        F: for<'a> Fn(TextInputState<'a>) -> ParseResult<'a, T>,
     {
         Parser { fun: Rc::new(f) }
     }
 
     // Discards result from previous parser
-    pub fn then<U>(self, next: &Parser<'a, U>) -> Parser<'a, U>
-    where
-        T: 'a,
-        U: 'a,
-    {
+    pub fn then<U>(self, next: &Parser<U>) -> Parser<U> {
         let next = next.clone();
         Parser::new(move |state| {
             let (_, new_state) = (self.fun)(state)?;
@@ -67,11 +62,7 @@ impl<'a, T> Parser<'a, T> {
     }
 
     // Discards result from next parser
-    pub fn before<U>(self, next: &Parser<'a, U>) -> Parser<'a, T>
-    where
-        T: 'a,
-        U: 'a,
-    {
+    pub fn before<U>(self, next: &Parser<U>) -> Parser<T> {
         let next = next.clone();
         Parser::new(move |state| {
             let (value, new_state) = (self.fun)(state)?;
@@ -81,11 +72,7 @@ impl<'a, T> Parser<'a, T> {
     }
 
     // Keeps results from both prevoius and next parser
-    pub fn and<U>(self, next: &Parser<'a, U>) -> Parser<'a, (T, U)>
-    where
-        T: 'a,
-        U: 'a,
-    {
+    pub fn and<U>(self, next: &Parser<U>) -> Parser<(T, U)> {
         let next = next.clone();
         Parser::new(move |state| {
             let (value1, new_state) = (self.fun)(state)?;
@@ -95,11 +82,9 @@ impl<'a, T> Parser<'a, T> {
     }
 
     // Maps the result of a parser by a given function
-    pub fn map<U, F>(self, f: F) -> Parser<'a, U>
+    pub fn map<U, F>(self, f: F) -> Parser<U>
     where
-        F: Fn(T) -> U + 'a,
-        T: 'a,
-        U: 'a,
+        F: Fn(T) -> U,
     {
         Parser::new(move |state| {
             let (value, new_state) = (self.fun)(state)?;
@@ -108,7 +93,7 @@ impl<'a, T> Parser<'a, T> {
     }
 
     // Runs parser on given input and returns result
-    pub fn run(self, input: &'a [char]) -> Result<T, ParseFailure<'a>> {
+    pub fn run(self, input: &[char]) -> Result<T, ParseFailure> {
         let tis = TextInputState::new(input, 0);
         match (self.fun)(tis) {
             Ok((value, _)) => Ok(value),
@@ -122,24 +107,21 @@ impl<'a, T> Parser<'a, T> {
  * They are the building blocks for all other parsers.
  */
 
-pub fn satisfy<'a, F>(predicate: F) -> Parser<'a, char>
+pub fn satisfy<F>(predicate: F) -> Parser<char>
 where
-    F: Fn(&char) -> bool + 'a,
+    F: Fn(&char) -> bool,
 {
     Parser::new(move |state| {
         let (opt, new_state) = state.next_char();
         match opt {
-            None => Err(ParseFailure::Eof(new_state)),
+            None => Err(ParseFailure::Eof),
             Some(ch) if predicate(&ch) => Ok((ch, new_state)),
-            Some(ch) => Err(ParseFailure::UnexpectedChar(ch, new_state)),
+            Some(ch) => Err(ParseFailure::UnexpectedChar(ch)),
         }
     })
 }
 
-pub fn choice<'a, T>(options: &[Parser<'a, T>]) -> Parser<'a, T>
-where
-    T: 'a,
-{
+pub fn choice<T>(options: &[Parser<T>]) -> Parser<T> {
     let options = options.to_vec();
     Parser::new(move |state| {
         for parser in &options {
@@ -148,14 +130,11 @@ where
                 Err(_) => continue,
             }
         }
-        Err(ParseFailure::OutOfOptions(state))
+        Err(ParseFailure::OutOfOptions)
     })
 }
 
-pub fn sequence<'a, T>(parsers: &[Parser<'a, T>]) -> Parser<'a, Vec<T>>
-where
-    T: 'a,
-{
+pub fn sequence<T>(parsers: &[Parser<T>]) -> Parser<Vec<T>> {
     let parsers = parsers.to_vec();
     Parser::new(move |mut state| {
         let mut acc = Vec::new();
@@ -170,10 +149,7 @@ where
     })
 }
 
-pub fn many<'a, T>(parser: &Parser<'a, T>) -> Parser<'a, Vec<T>>
-where
-    T: 'a,
-{
+pub fn many<T>(parser: &Parser<T>) -> Parser<Vec<T>> {
     let parser = parser.clone();
 
     Parser::new(move |mut state| {
