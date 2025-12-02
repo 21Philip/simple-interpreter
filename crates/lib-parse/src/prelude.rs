@@ -23,6 +23,7 @@ impl<'a> TextInputState<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum ParseFailure<'a> {
     Eof(TextInputState<'a>),
     UnexpectedChar(char, TextInputState<'a>),
