@@ -14,7 +14,7 @@ impl<T: 'static> ParserTestExt<T> for Parser<T> {
 
 #[test]
 fn test_satisfy() {
-    let p = satisfy(|&ch| ch == 'a');
+    let p = satisfy(|ch| ch == 'a');
 
     assert_eq!(p.run_str("abc").expect("should be Ok"), 'a');
     assert!(p.run_str("bcd").is_err())
@@ -38,7 +38,7 @@ fn test_pstring() {
 
 #[test]
 fn test_choice() {
-    let p = choice(&[pchar('a'), pchar('b'), pchar('c')]);
+    let p = choice(&[&pchar('a'), &pchar('b'), &pchar('c')]);
 
     assert_eq!(p.run_str("bca").expect("should be Ok"), 'b');
     assert!(p.run_str("def").is_err());
@@ -46,7 +46,7 @@ fn test_choice() {
 
 #[test]
 fn test_sequence() {
-    let p = sequence(&[pchar('a'), pchar('b'), pchar('c')]);
+    let p = sequence(&[&pchar('a'), &pchar('b'), &pchar('c')]);
 
     assert_eq!(p.run_str("abcd").expect("should be Ok"), ['a', 'b', 'c']);
     assert!(p.run_str("abdc").is_err());
@@ -102,7 +102,7 @@ fn test_and() {
 
 #[test]
 fn test_map() {
-    let p = sequence(&[pchar('a'), pchar('b'), pchar('c')]).map(String::from_iter);
+    let p = sequence(&[&pchar('a'), &pchar('b'), &pchar('c')]).map(String::from_iter);
 
     assert_eq!(p.run_str("abcd").expect("should be Ok"), "abc");
     assert!(p.run_str("abdc").is_err());

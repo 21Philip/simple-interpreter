@@ -15,8 +15,16 @@ pub fn pstring(s: &str) -> Parser<String> {
     sequence(&borrowed).map(String::from_iter)
 }
 
+pub fn pdigit() -> Parser<char> {
+    satisfy(|ch| ch.is_ascii_digit())
+}
+
 pub fn pi64() -> Parser<i64> {
-    many1(&satisfy(|ch| ch.is_ascii_digit()))
-        .map(String::from_iter)
-        .map_fallible(|result| str::parse::<i64>(&result))
+    optional(&pchar('-'))
+        .and(&many1(&pdigit()))
+        .map_fallible(|result| {
+            let (sign, digits) = result;
+            let number = String::from_iter(digits);
+            str::parse::<i64>(&number).map(|n| n * if sign.is_some() { -1 } else { 1 })
+        })
 }
