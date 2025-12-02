@@ -1,4 +1,4 @@
-use lib_parse::combinators::*;
+use lib_parse::parsers::*;
 use lib_parse::prelude::*;
 
 trait ParserTestExt<T> {
