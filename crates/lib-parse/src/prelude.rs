@@ -187,10 +187,6 @@ pub fn many1<T: 'static>(parser: &Parser<T>) -> Parser<Vec<T>> {
     })
 }
 
-pub fn or_else<T: 'static>(p1: &Parser<T>, p2: &Parser<T>) -> Parser<T> {
-    choice(&[p1, p2])
-}
-
 pub fn optional<T: 'static>(parser: &Parser<T>) -> Parser<Option<T>> {
     let parser = parser.clone();
 
@@ -198,4 +194,18 @@ pub fn optional<T: 'static>(parser: &Parser<T>) -> Parser<Option<T>> {
         Ok((value, new_state)) => Ok((Some(value), new_state)),
         Err(_) => Ok((None, state)),
     })
+}
+
+pub fn or_else<T: 'static>(p1: &Parser<T>, p2: &Parser<T>) -> Parser<T> {
+    choice(&[p1, p2])
+}
+
+pub fn between<T, U, S>(left: &Parser<T>, right: &Parser<U>, mid: &Parser<S>) -> Parser<S>
+where
+    T: 'static,
+    U: 'static,
+    S: 'static,
+{
+    let left = left.clone();
+    left.then(mid).before(right)
 }
