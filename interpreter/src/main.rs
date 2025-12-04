@@ -3,7 +3,7 @@ use lib_parse::prelude::*;
 mod parser;
 
 fn main() {
-    let cs: Vec<char> = "3 + 2 + 4".chars().collect();
+    let cs: Vec<char> = "3 + 2 + 4 ".chars().collect();
 
     match paexpr().run(&cs) {
         Ok(a) => println!("success: {:?}", a),

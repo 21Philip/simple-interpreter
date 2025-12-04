@@ -55,35 +55,38 @@ impl<T: 'static> IgnoreWhitespace<T> for Parser<T> {
         self.before(spaces).before(next)
     }
 
-    fn ands<F, U>(self, next: &Parser<U>) -> Parser<(T, U)>
+    fn ands<F, U>(self, next: F) -> Parser<(T, U)>
     where
         F: Fn() -> Parser<U> + 'static,
         U: 'static,
     {
-        self.before(spaces()).and(next)
+        self.before(spaces).and(next)
     }
 }
 
-fn pbinop<T, U, S>(op: &Parser<T>, a: &Parser<U>, b: &Parser<S>) -> Parser<(U, S)>
+fn pbinop<F, G, H, T, U, S>(op: F, a: G, b: H) -> Parser<(U, S)>
 where
+    F: Fn() -> Parser<T> + 'static,
+    G: Fn() -> Parser<U> + 'static,
+    H: Fn() -> Parser<S> + 'static,
     T: 'static,
     U: 'static,
     S: 'static,
 {
-    a.clone().befores(op).ands(b)
+    a().befores(op).ands(b)
 }
 
 /* ===== "language name"-Parsing ===== */
 
 fn padd() -> Parser<Aexpr> {
-    pbinop(&lazy(|| pchar('+')), &lazy(p_a2), &lazy(p_a1)).map(|result| {
+    pbinop(|| pchar('+'), p_a2, p_a1).map(|result| {
         let (a, b) = result;
         Aexpr::Add(Box::new(a), Box::new(b))
     })
 }
 
 fn p_a1() -> Parser<Aexpr> {
-    choice(&[&lazy(padd), &lazy(p_a2)])
+    choice([padd, p_a2].to_vec())
 }
 
 fn pnum() -> Parser<Aexpr> {
@@ -91,9 +94,9 @@ fn pnum() -> Parser<Aexpr> {
 }
 
 fn p_a2() -> Parser<Aexpr> {
-    choice(&[&lazy(pnum), &lazy(paexpr)])
+    choice([pnum, paexpr].to_vec())
 }
 
 pub fn paexpr() -> Parser<Aexpr> {
-    choice(&[&lazy(p_a1), &lazy(p_a2)])
+    choice([p_a1, p_a2].to_vec())
 }
