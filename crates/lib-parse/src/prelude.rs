@@ -30,9 +30,6 @@ pub enum ParseFailure {
 
 type ParseResult<'a, T> = Result<(T, TextInputState<'a>), ParseFailure>;
 
-//trait ParserClosure<T>: Fn() -> Parser<T> + 'static {}
-//impl<T, F> ParserClosure<T> for F where F: Fn() -> Parser<T> + 'static {}
-
 pub struct Parser<T> {
     fun: Rc<dyn for<'a> Fn(TextInputState<'a>) -> ParseResult<'a, T>>,
 }
@@ -45,6 +42,9 @@ impl<T> Clone for Parser<T> {
     }
 }
 
+pub trait ParseClosure<T>: Fn() -> Parser<T> + 'static {}
+impl<T, F> ParseClosure<T> for F where F: Fn() -> Parser<T> + 'static {}
+
 impl<T: 'static> Parser<T> {
     fn new<F>(f: F) -> Parser<T>
     where
@@ -54,11 +54,7 @@ impl<T: 'static> Parser<T> {
     }
 
     // Discards result from previous parser
-    pub fn then<F, U>(self, parser: F) -> Parser<U>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static,
-    {
+    pub fn then<U: 'static>(self, parser: impl ParseClosure<U>) -> Parser<U> {
         Parser::new(move |state| {
             let (_, new_state) = (self.fun)(state)?;
             (parser().fun)(new_state)
@@ -66,11 +62,7 @@ impl<T: 'static> Parser<T> {
     }
 
     // Discards result from next parser
-    pub fn before<F, U>(self, parser: F) -> Parser<T>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static,
-    {
+    pub fn before<U: 'static>(self, parser: impl ParseClosure<U>) -> Parser<T> {
         Parser::new(move |state| {
             let (value, new_state) = (self.fun)(state)?;
             let (_, new_state) = (parser().fun)(new_state)?;
@@ -79,11 +71,7 @@ impl<T: 'static> Parser<T> {
     }
 
     // Keeps results from both prevoius and next parser
-    pub fn and<F, U>(self, parser: F) -> Parser<(T, U)>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static,
-    {
+    pub fn and<U: 'static>(self, parser: impl ParseClosure<U>) -> Parser<(T, U)> {
         Parser::new(move |state| {
             let (value1, new_state) = (self.fun)(state)?;
             let (value2, new_state) = (parser().fun)(new_state)?;
@@ -142,11 +130,7 @@ where
     })
 }
 
-pub fn choice<F, T>(options: Vec<F>) -> Parser<T>
-where
-    F: Fn() -> Parser<T> + 'static,
-    T: 'static,
-{
+pub fn choice<T: 'static>(options: Vec<impl ParseClosure<T>>) -> Parser<T> {
     Parser::new(move |state| {
         for parser in &options {
             match (parser().fun)(state) {
@@ -158,11 +142,7 @@ where
     })
 }
 
-pub fn sequence<F, T>(parsers: Vec<F>) -> Parser<Vec<T>>
-where
-    F: Fn() -> Parser<T> + 'static,
-    T: 'static,
-{
+pub fn sequence<T: 'static>(parsers: Vec<impl ParseClosure<T>>) -> Parser<Vec<T>> {
     Parser::new(move |mut state| {
         let mut acc = Vec::new();
         for parser in &parsers {
@@ -175,11 +155,7 @@ where
     })
 }
 
-pub fn many<F, T>(parser: F) -> Parser<Vec<T>>
-where
-    F: Fn() -> Parser<T> + 'static,
-    T: 'static,
-{
+pub fn many<T: 'static>(parser: impl ParseClosure<T>) -> Parser<Vec<T>> {
     Parser::new(move |mut state| {
         let mut acc = Vec::new();
         while let Ok((value, new_state)) = (parser().fun)(state) {
@@ -190,11 +166,7 @@ where
     })
 }
 
-pub fn many1<F, T>(parser: F) -> Parser<Vec<T>>
-where
-    F: Fn() -> Parser<T> + 'static,
-    T: 'static,
-{
+pub fn many1<T: 'static>(parser: impl ParseClosure<T>) -> Parser<Vec<T>> {
     Parser::new(move |state| {
         let p = parser();
         let (first, state) = (p.fun)(state)?;
@@ -204,11 +176,7 @@ where
     })
 }
 
-pub fn optional<F, T>(parser: F) -> Parser<Option<T>>
-where
-    F: Fn() -> Parser<T> + 'static,
-    T: 'static,
-{
+pub fn optional<T: 'static>(parser: impl ParseClosure<T>) -> Parser<Option<T>> {
     Parser::new(move |state| match (parser().fun)(state) {
         Ok((value, new_state)) => Ok((Some(value), new_state)),
         Err(_) => Ok((None, state)),
@@ -216,9 +184,6 @@ where
 }
 
 /*
-pub fn or_else<T: 'static>(p1: &Parser<T>, p2: &Parser<T>) -> Parser<T> {
-    choice(&[p1, p2])
-}
 
 pub fn between<T, U, S>(left: &Parser<T>, right: &Parser<U>, mid: &Parser<S>) -> Parser<S>
 where
@@ -231,14 +196,3 @@ where
 }
 
 */
-
-pub fn lazy<T, F>(f: F) -> Parser<T>
-where
-    F: Fn() -> Parser<T> + 'static,
-    T: 'static,
-{
-    Parser::new(move |state| {
-        let parser = f();
-        (parser.fun)(state)
-    })
-}

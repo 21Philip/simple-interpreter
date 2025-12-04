@@ -23,52 +23,32 @@ fn spaces1() -> Parser<Vec<char>> {
     many1(pwhitespace)
 }
 
-trait IgnoreWhitespace<T> {
-    fn thens<F, U>(self, next: F) -> Parser<U>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static;
-    fn befores<F, U>(self, next: F) -> Parser<T>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static;
-    fn ands<F, U>(self, next: F) -> Parser<(T, U)>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static;
+trait IgnoreWhitespace<T: 'static, U: 'static> {
+    fn thens(self, next: impl ParseClosure<U>) -> Parser<U>;
+    fn befores(self, next: impl ParseClosure<U>) -> Parser<T>;
+    fn ands(self, next: impl ParseClosure<U>) -> Parser<(T, U)>;
 }
 
-impl<T: 'static> IgnoreWhitespace<T> for Parser<T> {
-    fn thens<F, U>(self, next: F) -> Parser<U>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static,
-    {
+impl<T: 'static, U: 'static> IgnoreWhitespace<T, U> for Parser<T> {
+    fn thens(self, next: impl ParseClosure<U>) -> Parser<U> {
         self.then(spaces).then(next)
     }
 
-    fn befores<F, U>(self, next: F) -> Parser<T>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static,
-    {
+    fn befores(self, next: impl ParseClosure<U>) -> Parser<T> {
         self.before(spaces).before(next)
     }
 
-    fn ands<F, U>(self, next: F) -> Parser<(T, U)>
-    where
-        F: Fn() -> Parser<U> + 'static,
-        U: 'static,
-    {
+    fn ands(self, next: impl ParseClosure<U>) -> Parser<(T, U)> {
         self.before(spaces).and(next)
     }
 }
 
-fn pbinop<F, G, H, T, U, S>(op: F, a: G, b: H) -> Parser<(U, S)>
+fn pbinop<T, U, S>(
+    op: impl ParseClosure<T>,
+    a: impl ParseClosure<U>,
+    b: impl ParseClosure<S>,
+) -> Parser<(U, S)>
 where
-    F: Fn() -> Parser<T> + 'static,
-    G: Fn() -> Parser<U> + 'static,
-    H: Fn() -> Parser<S> + 'static,
     T: 'static,
     U: 'static,
     S: 'static,
