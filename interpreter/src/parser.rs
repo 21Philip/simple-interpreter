@@ -59,28 +59,28 @@ where
 /* ===== "language name"-Parsing ===== */
 
 fn padd() -> Parser<Aexpr> {
-    pbinop(|| pchar('+'), p_a2, p_a1).map(|result| {
+    pbinop(|| pchar('+'), p_ae2, p_ae1).map(|result| {
         let (a, b) = result;
         Aexpr::Add(Box::new(a), Box::new(b))
     })
 }
 
-fn p_a1() -> Parser<Aexpr> {
-    choice([padd, p_a2].to_vec())
+fn p_ae1() -> Parser<Aexpr> {
+    choice([padd, p_ae2].to_vec())
 }
 
 fn pnum() -> Parser<Aexpr> {
     pi64().map(Aexpr::Num)
 }
 
-fn p_a2() -> Parser<Aexpr> {
+fn p_ae2() -> Parser<Aexpr> {
     choice([pnum].to_vec())
 }
 
 fn paexpr() -> Parser<Aexpr> {
-    choice([p_a1, p_a2].to_vec())
+    choice([p_ae1, p_ae2].to_vec())
 }
 
 pub fn pprogram() -> Parser<Aexpr> {
-    paexpr().before(eof)
+    spaces().then(paexpr).befores(eof)
 }
