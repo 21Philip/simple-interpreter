@@ -16,30 +16,51 @@ fn pwhitespace() -> Parser<char> {
 }
 
 fn spaces() -> Parser<Vec<char>> {
-    many(&pwhitespace())
+    many(pwhitespace)
 }
 
 fn spaces1() -> Parser<Vec<char>> {
-    many1(&pwhitespace())
+    many1(pwhitespace)
 }
 
 trait IgnoreWhitespace<T> {
-    fn thens<U: 'static>(self, next: &Parser<U>) -> Parser<U>;
-    fn befores<U: 'static>(self, next: &Parser<U>) -> Parser<T>;
-    fn ands<U: 'static>(self, next: &Parser<U>) -> Parser<(T, U)>;
+    fn thens<F, U>(self, next: F) -> Parser<U>
+    where
+        F: Fn() -> Parser<U> + 'static,
+        U: 'static;
+    fn befores<F, U>(self, next: F) -> Parser<T>
+    where
+        F: Fn() -> Parser<U> + 'static,
+        U: 'static;
+    fn ands<F, U>(self, next: F) -> Parser<(T, U)>
+    where
+        F: Fn() -> Parser<U> + 'static,
+        U: 'static;
 }
 
 impl<T: 'static> IgnoreWhitespace<T> for Parser<T> {
-    fn thens<U: 'static>(self, next: &Parser<U>) -> Parser<U> {
-        self.then(&spaces()).then(next)
+    fn thens<F, U>(self, next: F) -> Parser<U>
+    where
+        F: Fn() -> Parser<U> + 'static,
+        U: 'static,
+    {
+        self.then(spaces).then(next)
     }
 
-    fn befores<U: 'static>(self, next: &Parser<U>) -> Parser<T> {
-        self.before(&spaces()).before(next)
+    fn befores<F, U>(self, next: F) -> Parser<T>
+    where
+        F: Fn() -> Parser<U> + 'static,
+        U: 'static,
+    {
+        self.before(spaces).before(next)
     }
 
-    fn ands<U: 'static>(self, next: &Parser<U>) -> Parser<(T, U)> {
-        self.before(&spaces()).and(next)
+    fn ands<F, U>(self, next: &Parser<U>) -> Parser<(T, U)>
+    where
+        F: Fn() -> Parser<U> + 'static,
+        U: 'static,
+    {
+        self.before(spaces()).and(next)
     }
 }
 
@@ -55,7 +76,7 @@ where
 /* ===== "language name"-Parsing ===== */
 
 fn padd() -> Parser<Aexpr> {
-    pbinop(&pchar('+'), &lazy(p_a2), &lazy(p_a1)).map(|result| {
+    pbinop(&lazy(|| pchar('+')), &lazy(p_a2), &lazy(p_a1)).map(|result| {
         let (a, b) = result;
         Aexpr::Add(Box::new(a), Box::new(b))
     })

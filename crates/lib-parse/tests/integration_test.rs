@@ -62,7 +62,7 @@ fn test_satisfy() {
 
 #[test]
 fn test_choice() {
-    let p = choice(&[&pchar('a'), &pchar('b'), &pchar('c')]);
+    let p = choice([|| pchar('a'), || pchar('b'), || pchar('c')].to_vec());
 
     assert_eq!(p.run_str("bca").expect("should be Ok"), 'b');
     assert_eq!(
@@ -73,7 +73,7 @@ fn test_choice() {
 
 #[test]
 fn test_sequence() {
-    let p = sequence(&[&pchar('a'), &pchar('b'), &pchar('c')]);
+    let p = sequence([|| pchar('a'), || pchar('b'), || pchar('c')].to_vec());
 
     assert_eq!(p.run_str("abcd").expect("should be Ok"), ['a', 'b', 'c']);
     assert!(p.run_str("abdc").is_err());
@@ -81,7 +81,7 @@ fn test_sequence() {
 
 #[test]
 fn test_many() {
-    let p = many(&pchar('a'));
+    let p = many(|| pchar('a'));
 
     assert_eq!(p.run_str("aaabb").expect("should be Ok"), ['a', 'a', 'a']);
     assert_eq!(p.run_str("abb").expect("should be Ok"), ['a']);
@@ -90,7 +90,7 @@ fn test_many() {
 
 #[test]
 fn test_many1() {
-    let p = many1(&pchar('a'));
+    let p = many1(|| pchar('a'));
 
     assert_eq!(p.run_str("aaabb").expect("should be Ok"), ['a', 'a', 'a']);
     assert_eq!(p.run_str("abb").expect("should be Ok"), ['a']);
@@ -99,7 +99,7 @@ fn test_many1() {
 
 #[test]
 fn test_then() {
-    let p = pchar('a').then(&pstring("b"));
+    let p = pchar('a').then(|| pstring("b"));
 
     assert_eq!(p.run_str("ab").expect("should be Ok"), "b");
     assert!(p.run_str("ac").is_err());
@@ -108,7 +108,7 @@ fn test_then() {
 
 #[test]
 fn test_before() {
-    let p = pchar('a').before(&pstring("b"));
+    let p = pchar('a').before(|| pstring("b"));
 
     assert_eq!(p.run_str("ab").expect("should be Ok"), 'a');
     assert!(p.run_str("ac").is_err());
@@ -117,7 +117,7 @@ fn test_before() {
 
 #[test]
 fn test_and() {
-    let p = pchar('a').and(&pstring("b"));
+    let p = pchar('a').and(|| pstring("b"));
 
     assert_eq!(
         p.run_str("ab").expect("should be Ok"),
@@ -129,7 +129,7 @@ fn test_and() {
 
 #[test]
 fn test_map() {
-    let p = sequence(&[&pchar('a'), &pchar('b'), &pchar('c')]).map(String::from_iter);
+    let p = sequence([|| pchar('a'), || pchar('b'), || pchar('c')].to_vec()).map(String::from_iter);
 
     assert_eq!(p.run_str("abcd").expect("should be Ok"), "abc");
     assert!(p.run_str("abdc").is_err());

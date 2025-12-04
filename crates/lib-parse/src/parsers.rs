@@ -10,9 +10,8 @@ pub fn pchar(ch: char) -> Parser<char> {
 }
 
 pub fn pstring(s: &str) -> Parser<String> {
-    let parsers: Vec<Parser<char>> = s.chars().map(pchar).collect();
-    let borrowed: Vec<&Parser<char>> = parsers.iter().collect();
-    sequence(&borrowed).map(String::from_iter)
+    let parsers = s.chars().map(|ch| move || pchar(ch)).collect();
+    sequence(parsers).map(String::from_iter)
 }
 
 pub fn pdigit() -> Parser<char> {
@@ -20,8 +19,8 @@ pub fn pdigit() -> Parser<char> {
 }
 
 pub fn pi64() -> Parser<i64> {
-    optional(&pchar('-'))
-        .and(&many1(&pdigit()))
+    optional(|| pchar('-'))
+        .and(|| many1(pdigit))
         .map_fallible(|result| {
             let (sign, digits) = result;
             let number = String::from_iter(digits);
