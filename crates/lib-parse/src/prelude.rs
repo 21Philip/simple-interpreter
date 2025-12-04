@@ -54,27 +54,27 @@ impl<T: 'static> Parser<T> {
     }
 
     // Discards result from previous parser
-    pub fn then<U: 'static>(self, parser: impl ParseClosure<U>) -> Parser<U> {
+    pub fn then<U: 'static>(self, next: impl ParseClosure<U>) -> Parser<U> {
         Parser::new(move |state| {
             let (_, new_state) = (self.fun)(state)?;
-            (parser().fun)(new_state)
+            (next().fun)(new_state)
         })
     }
 
     // Discards result from next parser
-    pub fn before<U: 'static>(self, parser: impl ParseClosure<U>) -> Parser<T> {
+    pub fn before<U: 'static>(self, next: impl ParseClosure<U>) -> Parser<T> {
         Parser::new(move |state| {
             let (value, new_state) = (self.fun)(state)?;
-            let (_, new_state) = (parser().fun)(new_state)?;
+            let (_, new_state) = (next().fun)(new_state)?;
             Ok((value, new_state))
         })
     }
 
     // Keeps results from both prevoius and next parser
-    pub fn and<U: 'static>(self, parser: impl ParseClosure<U>) -> Parser<(T, U)> {
+    pub fn and<U: 'static>(self, next: impl ParseClosure<U>) -> Parser<(T, U)> {
         Parser::new(move |state| {
             let (value1, new_state) = (self.fun)(state)?;
-            let (value2, new_state) = (parser().fun)(new_state)?;
+            let (value2, new_state) = (next().fun)(new_state)?;
             Ok(((value1, value2), new_state))
         })
     }
