@@ -130,6 +130,13 @@ where
     })
 }
 
+pub fn eof() -> Parser<()> {
+    Parser::new(|state| match state.next_char() {
+        None => Ok(((), state)),
+        Some((ch, _)) => Err(ParseFailure::UnexpectedChar(ch)),
+    })
+}
+
 pub fn choice<T: 'static>(options: Vec<impl ParseClosure<T>>) -> Parser<T> {
     Parser::new(move |state| {
         for parser in &options {

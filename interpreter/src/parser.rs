@@ -74,9 +74,13 @@ fn pnum() -> Parser<Aexpr> {
 }
 
 fn p_a2() -> Parser<Aexpr> {
-    choice([pnum, paexpr].to_vec())
+    choice([pnum].to_vec())
 }
 
-pub fn paexpr() -> Parser<Aexpr> {
+fn paexpr() -> Parser<Aexpr> {
     choice([p_a1, p_a2].to_vec())
+}
+
+pub fn pprogram() -> Parser<Aexpr> {
+    paexpr().before(eof)
 }

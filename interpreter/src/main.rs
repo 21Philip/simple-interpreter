@@ -1,11 +1,11 @@
-use crate::parser::paexpr;
+use crate::parser::pprogram;
 use lib_parse::prelude::*;
 mod parser;
 
 fn main() {
-    let cs: Vec<char> = "3 + 2 + 4 ".chars().collect();
+    let cs: Vec<char> = "3+4+5 ".chars().collect();
 
-    match paexpr().run(&cs) {
+    match pprogram().run(&cs) {
         Ok(a) => println!("success: {:?}", a),
         Err(e) => match e {
             ParseFailure::Eof => println!("eof"),
