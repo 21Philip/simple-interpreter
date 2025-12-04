@@ -3,7 +3,7 @@ use lib_parse::prelude::*;
 mod parser;
 
 fn main() {
-    let cs: Vec<char> = "  3+4   +5 ".chars().collect();
+    let cs: Vec<char> = "(5-6) + 4 / 6 + -3".chars().collect();
 
     match pprogram().run(&cs) {
         Ok(a) => println!("success: {:?}", a),
