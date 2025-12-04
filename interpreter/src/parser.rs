@@ -129,7 +129,8 @@ fn pnegate() -> Parser<Aexpr> {
 }
 
 fn pparentheses() -> Parser<Aexpr> {
-    between(|| pchar('('), || pchar(')'), p_ae1) // mid is lowest precedence
+    // mid argument must be lowest precedence level
+    between(|| pchar('('), || pchar(')'), p_ae1)
 }
 
 fn pnum() -> Parser<Aexpr> {
@@ -137,6 +138,9 @@ fn pnum() -> Parser<Aexpr> {
 }
 
 fn p_ae3() -> Parser<Aexpr> {
+    // highest level does not call up.
+    // pnum parses '-' so order between
+    // pnegate and pnum matters.
     choice([pnegate, pparentheses, pnum].to_vec())
 }
 
