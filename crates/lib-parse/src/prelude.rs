@@ -209,3 +209,14 @@ where
     let left = left.clone();
     left.then(mid).before(right)
 }
+
+pub fn lazy<T, F>(f: F) -> Parser<T>
+where
+    F: Fn() -> Parser<T> + 'static,
+    T: 'static,
+{
+    Parser::new(move |state| {
+        let parser = f();
+        (parser.fun)(state)
+    })
+}

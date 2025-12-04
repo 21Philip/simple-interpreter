@@ -1,10 +1,11 @@
-use lib_parse::prelude::ParseFailure;
+use crate::parser::paexpr;
+use lib_parse::prelude::*;
 mod parser;
 
 fn main() {
-    let cs: Vec<char> = "hellooo,,,, world!".chars().collect();
+    let cs: Vec<char> = "3 + 2".chars().collect();
 
-    match parser::parser().run(&cs) {
+    match paexpr().run(&cs) {
         Ok(a) => println!("success: {:?}", a),
         Err(e) => match e {
             ParseFailure::Eof => println!("eof"),
