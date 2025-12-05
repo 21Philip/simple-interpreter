@@ -129,7 +129,7 @@ fn pnegate() -> Parser<Aexpr> {
 }
 
 fn pparentheses() -> Parser<Aexpr> {
-    // mid argument must be lowest precedence level
+    // 'mid' argument must be lowest precedence level
     between(|| pchar('('), || pchar(')'), p_ae1)
 }
 
@@ -154,4 +154,17 @@ fn paexpr() -> Parser<Aexpr> {
 
 pub fn pprogram() -> Parser<Aexpr> {
     spaces().then(paexpr).befores(eof)
+}
+
+/* ===== Evaluation ==== */
+
+pub fn arith_eval(expr: Aexpr) -> i64 {
+    match expr {
+        Aexpr::Add(a, b) => arith_eval(*a) + arith_eval(*b),
+        Aexpr::Sub(a, b) => arith_eval(*a) - arith_eval(*b),
+        Aexpr::Mul(a, b) => arith_eval(*a) * arith_eval(*b),
+        Aexpr::Div(a, b) => arith_eval(*a) / arith_eval(*b),
+        Aexpr::Negate(a) => -arith_eval(*a),
+        Aexpr::Num(a) => a,
+    }
 }
