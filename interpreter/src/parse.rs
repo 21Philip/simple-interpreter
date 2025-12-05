@@ -1,20 +1,6 @@
-use lib_parse::parsers::*;
+use crate::language::Aexpr;
+use lib_parse::parsers::{pchar, pi64};
 use lib_parse::prelude::*;
-
-/* ===== Language ===== */
-
-#[derive(Debug)]
-pub enum Aexpr {
-    // Precedence 1
-    Add(Box<Aexpr>, Box<Aexpr>),
-    Sub(Box<Aexpr>, Box<Aexpr>),
-    // Precedence 2
-    Mul(Box<Aexpr>, Box<Aexpr>),
-    Div(Box<Aexpr>, Box<Aexpr>),
-    // Precedence 3
-    Negate(Box<Aexpr>),
-    Num(i64),
-}
 
 /* ===== Generic Parsers & Helpers ===== */
 
@@ -26,9 +12,11 @@ fn spaces() -> Parser<Vec<char>> {
     many(pwhitespace)
 }
 
+/*
 fn spaces1() -> Parser<Vec<char>> {
     many1(pwhitespace)
 }
+*/
 
 trait IgnoreWhitespace<T: 'static, U: 'static> {
     fn thens(self, next: impl ParseClosure<U>) -> Parser<U>;
@@ -80,7 +68,7 @@ where
 
 /* === Arithmetic Expressions === */
 
-// Level 1
+// Level 1:
 
 fn padd() -> Parser<Aexpr> {
     pbinop(|| pchar('+'), p_ae2, p_ae1).map(|result| {
@@ -100,7 +88,7 @@ fn p_ae1() -> Parser<Aexpr> {
     choice([padd, psub, p_ae2].to_vec())
 }
 
-// Level 2
+// Level 2:
 
 fn pmul() -> Parser<Aexpr> {
     pbinop(|| pchar('*'), p_ae3, p_ae2).map(|result| {
@@ -120,7 +108,7 @@ fn p_ae2() -> Parser<Aexpr> {
     choice([pmul, pdiv, p_ae3].to_vec())
 }
 
-// Level 3
+// Level 3:
 
 fn pnegate() -> Parser<Aexpr> {
     pchar('-')
@@ -154,17 +142,4 @@ fn paexpr() -> Parser<Aexpr> {
 
 pub fn pprogram() -> Parser<Aexpr> {
     spaces().then(paexpr).befores(eof)
-}
-
-/* ===== Evaluation ==== */
-
-pub fn arith_eval(expr: Aexpr) -> i64 {
-    match expr {
-        Aexpr::Add(a, b) => arith_eval(*a) + arith_eval(*b),
-        Aexpr::Sub(a, b) => arith_eval(*a) - arith_eval(*b),
-        Aexpr::Mul(a, b) => arith_eval(*a) * arith_eval(*b),
-        Aexpr::Div(a, b) => arith_eval(*a) / arith_eval(*b),
-        Aexpr::Negate(a) => -arith_eval(*a),
-        Aexpr::Num(a) => a,
-    }
 }

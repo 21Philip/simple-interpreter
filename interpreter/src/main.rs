@@ -1,5 +1,5 @@
-use crate::parser::{arith_eval, pprogram};
-mod parser;
+use interpreter::eval::arith_eval;
+use interpreter::parse::pprogram;
 
 fn main() {
     let cs: Vec<char> = "(5-6) + 4 / 6 + -3".chars().collect();

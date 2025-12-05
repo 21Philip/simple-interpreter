@@ -1,0 +1,12 @@
+#[derive(Debug)]
+pub enum Aexpr {
+    // Precedence 1
+    Add(Box<Aexpr>, Box<Aexpr>),
+    Sub(Box<Aexpr>, Box<Aexpr>),
+    // Precedence 2
+    Mul(Box<Aexpr>, Box<Aexpr>),
+    Div(Box<Aexpr>, Box<Aexpr>),
+    // Precedence 3
+    Negate(Box<Aexpr>),
+    Num(i64),
+}
