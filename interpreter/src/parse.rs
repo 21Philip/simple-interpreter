@@ -1,4 +1,4 @@
-use crate::language::Aexpr;
+use crate::language::{Aexpr, Atomic};
 use lib_parse::parsers::{pchar, pi64};
 use lib_parse::prelude::*;
 
@@ -66,6 +66,25 @@ where
 
 /* ===== "language name"-Parsing ===== */
 
+/* === Atomic Values === */
+fn pint() -> Parser<Atomic> {
+    pi64().map(Atomic::Int)
+}
+
+fn pidentifier() -> Parser<Atomic> {
+    satisfy(|ch| ch.is_alphabetic())
+        .and(|| many(|| satisfy(|ch| ch.is_alphanumeric())))
+        .map(|result| {
+            let (first, mut rest) = result;
+            rest.insert(0, first);
+            Atomic::Identifier(String::from_iter(rest))
+        })
+}
+
+fn patomic() -> Parser<Atomic> {
+    choice([pint, pidentifier].to_vec())
+}
+
 /* === Arithmetic Expressions === */
 
 // Level 1:
@@ -122,7 +141,7 @@ fn pparentheses() -> Parser<Aexpr> {
 }
 
 fn pnum() -> Parser<Aexpr> {
-    pi64().map(Aexpr::Num)
+    patomic().map(Aexpr::Num)
 }
 
 fn p_ae3() -> Parser<Aexpr> {

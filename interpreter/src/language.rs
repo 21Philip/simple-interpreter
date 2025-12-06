@@ -1,4 +1,10 @@
 #[derive(Debug)]
+pub enum Atomic {
+    Int(i64),
+    Identifier(String),
+}
+
+#[derive(Debug)]
 pub enum Aexpr {
     // Precedence 1
     Add(Box<Aexpr>, Box<Aexpr>),
@@ -8,5 +14,12 @@ pub enum Aexpr {
     Div(Box<Aexpr>, Box<Aexpr>),
     // Precedence 3
     Negate(Box<Aexpr>),
-    Num(i64),
+    Num(Atomic),
+}
+
+#[derive(Debug)]
+pub enum Statement {
+    Assign(String, Aexpr),
+    Sequence(Vec<Statement>),
+    Print(Aexpr),
 }
