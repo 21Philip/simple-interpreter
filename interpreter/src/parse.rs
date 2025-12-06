@@ -1,5 +1,7 @@
+use std::collections::VecDeque;
+
 use crate::language::{Aexpr, Atomic, Statement};
-use lib_parse::parsers::{pchar, pi64};
+use lib_parse::parsers::{pchar, pi64, pstring};
 use lib_parse::prelude::*;
 
 /* ===== Generic Parsers & Helpers ===== */
@@ -49,7 +51,7 @@ where
     a().befores(op).ands(b)
 }
 
-pub fn between<T, U, S>(
+fn between<T, U, S>(
     left: impl ParseClosure<T>,
     right: impl ParseClosure<U>,
     mid: impl ParseClosure<S>,
@@ -62,19 +64,14 @@ where
     left().thens(mid).befores(right)
 }
 
-/* ===== Tokens ===== */
-
-struct Tokens {
-    ADD: Parser<char>,
+fn pid() -> Parser<String> {
+    satisfy(|ch| ch.is_alphabetic())
+        .and(|| many(|| satisfy(|ch| ch.is_alphanumeric())))
+        .map(|(first, mut rest)| {
+            rest.insert(0, first);
+            String::from_iter(rest)
+        })
 }
-
-const TOKENS: Tokens = Tokens { ADD: pchar('+') };
-
-fn test() -> Parser<char> {
-    pchar('+')
-}
-
-const ADD: fn() -> Parser<char> = test;
 
 /* ===== "language name"-Parsing ===== */
 
@@ -85,13 +82,7 @@ fn pint() -> Parser<Atomic> {
 }
 
 fn pidentifier() -> Parser<Atomic> {
-    satisfy(|ch| ch.is_alphabetic())
-        .and(|| many(|| satisfy(|ch| ch.is_alphanumeric())))
-        .map(|result| {
-            let (first, mut rest) = result;
-            rest.insert(0, first);
-            Atomic::Identifier(String::from_iter(rest))
-        })
+    pid().map(Atomic::Identifier)
 }
 
 fn patomic() -> Parser<Atomic> {
@@ -103,17 +94,11 @@ fn patomic() -> Parser<Atomic> {
 // Precedence 1:
 
 fn padd() -> Parser<Aexpr> {
-    pbinop(|| pchar('+'), p_ae2, p_ae1).map(|result| {
-        let (a, b) = result;
-        Aexpr::Add(Box::new(a), Box::new(b))
-    })
+    pbinop(|| pchar('+'), p_ae2, p_ae1).map(|(a, b)| Aexpr::Add(Box::new(a), Box::new(b)))
 }
 
 fn psub() -> Parser<Aexpr> {
-    pbinop(|| pchar('-'), p_ae2, p_ae1).map(|result| {
-        let (a, b) = result;
-        Aexpr::Sub(Box::new(a), Box::new(b))
-    })
+    pbinop(|| pchar('-'), p_ae2, p_ae1).map(|(a, b)| Aexpr::Sub(Box::new(a), Box::new(b)))
 }
 
 fn p_ae1() -> Parser<Aexpr> {
@@ -123,17 +108,11 @@ fn p_ae1() -> Parser<Aexpr> {
 // Precedence 2:
 
 fn pmul() -> Parser<Aexpr> {
-    pbinop(|| pchar('*'), p_ae3, p_ae2).map(|result| {
-        let (a, b) = result;
-        Aexpr::Mul(Box::new(a), Box::new(b))
-    })
+    pbinop(|| pchar('*'), p_ae3, p_ae2).map(|(a, b)| Aexpr::Mul(Box::new(a), Box::new(b)))
 }
 
 fn pdiv() -> Parser<Aexpr> {
-    pbinop(|| pchar('/'), p_ae3, p_ae2).map(|result| {
-        let (a, b) = result;
-        Aexpr::Div(Box::new(a), Box::new(b))
-    })
+    pbinop(|| pchar('/'), p_ae3, p_ae2).map(|(a, b)| Aexpr::Div(Box::new(a), Box::new(b)))
 }
 
 fn p_ae2() -> Parser<Aexpr> {
@@ -174,20 +153,51 @@ fn paexpr() -> Parser<Aexpr> {
 
 // Precedence 1:
 
-pub fn psequence() -> Parser<Statement> {
-    pbinop(|| pchar(';'), _)
+fn psequence() -> Parser<Statement> {
+    pbinop(|| pchar(';'), p_stmnt2, p_stmnt1).map(|(a, b)| match b {
+        Statement::Sequence(mut queue) => {
+            queue.push_front(a);
+            Statement::Sequence(queue)
+        }
+        _ => Statement::Sequence(VecDeque::from([a, b])),
+    })
+}
+
+fn p_stmnt1() -> Parser<Statement> {
+    psequence() // Only have sequence on this level atm
 }
 
 // Precedence 2:
-pub fn passign() -> Parser<Statement> {
-    pstring("let").then(spaces1).then(pidentifier).then()
+
+fn passign() -> Parser<Statement> {
+    pstring("let")
+        .then(spaces1)
+        .then(pid)
+        .befores(|| pchar('='))
+        .ands(paexpr)
+        .map(|(id, value)| Statement::Assign(id, value))
 }
 
-// Precedence
+fn pprint() -> Parser<Statement> {
+    pstring("print")
+        .then(spaces1)
+        .then(paexpr)
+        .map(Statement::Print)
+}
+
+fn p_stmnt2() -> Parser<Statement> {
+    choice([passign, pprint].to_vec())
+}
+
+// Full statement
+
+fn pstatement() -> Parser<Statement> {
+    choice([p_stmnt1, p_stmnt2].to_vec())
+}
 
 /* === Full AST parser === */
 
-pub fn parse_ast(input: &str) -> Result<Aexpr, ParseFailure> {
+pub fn parse_ast(input: &str) -> Result<Statement, ParseFailure> {
     let chars: Vec<char> = input.chars().collect();
-    spaces().then(paexpr).befores(eof).run(&chars)
+    spaces().then(pstatement).befores(eof).run(&chars)
 }

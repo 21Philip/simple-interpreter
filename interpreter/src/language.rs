@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 #[derive(Debug)]
 pub enum Atomic {
     Int(i64),
@@ -19,7 +21,7 @@ pub enum Aexpr {
 
 #[derive(Debug)]
 pub enum Statement {
-    Sequence(Vec<Statement>),
+    Sequence(VecDeque<Statement>),
     Assign(String, Aexpr),
     Print(Aexpr),
 }
