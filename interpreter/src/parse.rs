@@ -164,7 +164,7 @@ fn psequence() -> Parser<Statement> {
 }
 
 fn p_stmnt1() -> Parser<Statement> {
-    psequence() // Only have sequence on this level atm
+    choice([psequence, p_stmnt2].to_vec()) // Only have sequence on this level atm
 }
 
 // Precedence 2:
@@ -199,5 +199,9 @@ fn pstatement() -> Parser<Statement> {
 
 pub fn parse_ast(input: &str) -> Result<Statement, ParseFailure> {
     let chars: Vec<char> = input.chars().collect();
-    spaces().then(pstatement).befores(eof).run(&chars)
+    spaces()
+        .then(pstatement)
+        .befores(|| optional(|| pchar(';')))
+        .befores(eof)
+        .run(&chars)
 }

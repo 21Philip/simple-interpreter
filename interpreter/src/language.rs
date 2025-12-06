@@ -21,7 +21,9 @@ pub enum Aexpr {
 
 #[derive(Debug)]
 pub enum Statement {
+    // Precedence 1
     Sequence(VecDeque<Statement>),
+    // Precedence 2
     Assign(String, Aexpr),
     Print(Aexpr),
 }
