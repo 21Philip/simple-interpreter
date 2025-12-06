@@ -1,4 +1,4 @@
-use crate::language::{Aexpr, Atomic};
+use crate::language::{Aexpr, Atomic, Statement};
 use lib_parse::parsers::{pchar, pi64};
 use lib_parse::prelude::*;
 
@@ -12,11 +12,9 @@ fn spaces() -> Parser<Vec<char>> {
     many(pwhitespace)
 }
 
-/*
 fn spaces1() -> Parser<Vec<char>> {
     many1(pwhitespace)
 }
-*/
 
 trait IgnoreWhitespace<T: 'static, U: 'static> {
     fn thens(self, next: impl ParseClosure<U>) -> Parser<U>;
@@ -64,9 +62,24 @@ where
     left().thens(mid).befores(right)
 }
 
+/* ===== Tokens ===== */
+
+struct Tokens {
+    ADD: Parser<char>,
+}
+
+const TOKENS: Tokens = Tokens { ADD: pchar('+') };
+
+fn test() -> Parser<char> {
+    pchar('+')
+}
+
+const ADD: fn() -> Parser<char> = test;
+
 /* ===== "language name"-Parsing ===== */
 
 /* === Atomic Values === */
+
 fn pint() -> Parser<Atomic> {
     pi64().map(Atomic::Int)
 }
@@ -87,7 +100,7 @@ fn patomic() -> Parser<Atomic> {
 
 /* === Arithmetic Expressions === */
 
-// Level 1:
+// Precedence 1:
 
 fn padd() -> Parser<Aexpr> {
     pbinop(|| pchar('+'), p_ae2, p_ae1).map(|result| {
@@ -107,7 +120,7 @@ fn p_ae1() -> Parser<Aexpr> {
     choice([padd, psub, p_ae2].to_vec())
 }
 
-// Level 2:
+// Precedence 2:
 
 fn pmul() -> Parser<Aexpr> {
     pbinop(|| pchar('*'), p_ae3, p_ae2).map(|result| {
@@ -127,7 +140,7 @@ fn p_ae2() -> Parser<Aexpr> {
     choice([pmul, pdiv, p_ae3].to_vec())
 }
 
-// Level 3:
+// Precedence 3:
 
 fn pnegate() -> Parser<Aexpr> {
     pchar('-')
@@ -145,9 +158,9 @@ fn pnum() -> Parser<Aexpr> {
 }
 
 fn p_ae3() -> Parser<Aexpr> {
-    // highest level does not call up.
-    // pnum parses '-' so order between
-    // pnegate and pnum matters.
+    // highest precedence does not call up.
+    // pnum might parse '-' so order between
+    // pnegate and pnum matters for AST (eval is same?).
     choice([pnegate, pparentheses, pnum].to_vec())
 }
 
@@ -157,8 +170,24 @@ fn paexpr() -> Parser<Aexpr> {
     choice([p_ae1, p_ae2, p_ae3].to_vec())
 }
 
-/* ===== Program ===== */
+/* === Statements === */
 
-pub fn pprogram() -> Parser<Aexpr> {
-    spaces().then(paexpr).befores(eof)
+// Precedence 1:
+
+pub fn psequence() -> Parser<Statement> {
+    pbinop(|| pchar(';'), _)
+}
+
+// Precedence 2:
+pub fn passign() -> Parser<Statement> {
+    pstring("let").then(spaces1).then(pidentifier).then()
+}
+
+// Precedence
+
+/* === Full AST parser === */
+
+pub fn parse_ast(input: &str) -> Result<Aexpr, ParseFailure> {
+    let chars: Vec<char> = input.chars().collect();
+    spaces().then(paexpr).befores(eof).run(&chars)
 }

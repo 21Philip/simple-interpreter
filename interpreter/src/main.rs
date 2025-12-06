@@ -1,9 +1,8 @@
 use interpreter::eval::arith_eval;
-use interpreter::parse::pprogram;
+use interpreter::parse::parse_ast;
 
 fn main() {
-    let cs: Vec<char> = "(5-6) + 4 / 6 + -3".chars().collect();
-    let program = match pprogram().run(&cs) {
+    let program = match parse_ast("(5-6) + 4 / 6 + -3") {
         Ok(p) => p,
         Err(e) => {
             println!("{:?}", e);

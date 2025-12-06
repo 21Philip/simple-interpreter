@@ -19,7 +19,7 @@ pub enum Aexpr {
 
 #[derive(Debug)]
 pub enum Statement {
-    Assign(String, Aexpr),
     Sequence(Vec<Statement>),
+    Assign(String, Aexpr),
     Print(Aexpr),
 }
