@@ -164,7 +164,7 @@ fn psequence() -> Parser<Statement> {
 }
 
 fn p_stmnt1() -> Parser<Statement> {
-    choice([psequence, p_stmnt2].to_vec()) // Only have sequence on this level atm
+    choice([psequence, p_stmnt2].to_vec())
 }
 
 // Precedence 2:
