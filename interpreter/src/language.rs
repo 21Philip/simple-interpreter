@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 #[derive(Debug)]
 pub enum Atomic {
     Int(i64),
+    //Bool(bool),
     Identifier(String),
 }
 
@@ -17,6 +18,13 @@ pub enum Aexpr {
     // Precedence 3
     Negate(Box<Aexpr>),
     Num(Atomic),
+}
+
+#[derive(Debug)]
+pub enum Bexpr {
+    And(Box<Bexpr>, Box<Bexpr>),
+    Or(Box<Bexpr>, Box<Bexpr>),
+    Not(Box<Bexpr>),
 }
 
 #[derive(Debug)]

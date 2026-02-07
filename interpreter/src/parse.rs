@@ -94,11 +94,21 @@ fn patomic() -> Parser<Atomic> {
 // Precedence 1:
 
 fn padd() -> Parser<Aexpr> {
-    pbinop(|| pchar('+'), p_ae2, p_ae1).map(|(a, b)| Aexpr::Add(Box::new(a), Box::new(b)))
+    p_ae2()
+        .ands(|| many1(|| pchar('+').thens(p_ae2)))
+        .map(|(first, rest)| {
+            rest.into_iter()
+                .fold(first, |acc, expr| Aexpr::Add(Box::new(acc), Box::new(expr)))
+        })
 }
 
 fn psub() -> Parser<Aexpr> {
-    pbinop(|| pchar('-'), p_ae2, p_ae1).map(|(a, b)| Aexpr::Sub(Box::new(a), Box::new(b)))
+    p_ae2()
+        .ands(|| many1(|| pchar('-').thens(p_ae2)))
+        .map(|(first, rest)| {
+            rest.into_iter()
+                .fold(first, |acc, expr| Aexpr::Sub(Box::new(acc), Box::new(expr)))
+        })
 }
 
 fn p_ae1() -> Parser<Aexpr> {
@@ -146,7 +156,7 @@ fn p_ae3() -> Parser<Aexpr> {
 // Full arithmetic expression
 
 fn paexpr() -> Parser<Aexpr> {
-    choice([p_ae1, p_ae2, p_ae3].to_vec())
+    p_ae1()
 }
 
 /* === Statements === */
@@ -192,7 +202,7 @@ fn p_stmnt2() -> Parser<Statement> {
 // Full statement
 
 fn pstatement() -> Parser<Statement> {
-    choice([p_stmnt1, p_stmnt2].to_vec())
+    p_stmnt1()
 }
 
 /* === Full AST parser === */
