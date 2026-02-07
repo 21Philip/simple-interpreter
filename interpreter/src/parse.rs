@@ -93,13 +93,19 @@ fn patomic() -> Parser<Atomic> {
 
 // Precedence 1:
 
+fn chain_left<A, P, F>(term: P, op: char, folder: F) -> Parser<A>
+where
+    A: 'static,
+    P: Fn() -> Parser<A> + Copy + 'static,
+    F: Fn(A, A) -> A + Copy + 'static,
+{
+    term()
+        .ands(move || many1(move || pchar(op).thens(term)))
+        .map(move |(first, rest)| rest.into_iter().fold(first, folder))
+}
+
 fn padd() -> Parser<Aexpr> {
-    p_ae2()
-        .ands(|| many1(|| pchar('+').thens(p_ae2)))
-        .map(|(first, rest)| {
-            rest.into_iter()
-                .fold(first, |acc, expr| Aexpr::Add(Box::new(acc), Box::new(expr)))
-        })
+    chain_left(p_ae2, '+', |a, b| Aexpr::Add(Box::new(a), Box::new(b)))
 }
 
 fn psub() -> Parser<Aexpr> {
