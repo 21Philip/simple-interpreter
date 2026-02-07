@@ -93,32 +93,37 @@ fn patomic() -> Parser<Atomic> {
 
 // Precedence 1:
 
-fn chain_left<A, P, F>(term: P, op: char, folder: F) -> Parser<A>
-where
-    A: 'static,
-    P: Fn() -> Parser<A> + Copy + 'static,
-    F: Fn(A, A) -> A + Copy + 'static,
-{
+fn chain_left<A: 'static>(
+    term: impl ParseClosure<A> + Copy,
+    op: impl ParseClosure<Box<dyn Fn(A, A) -> A>> + Copy,
+) -> Parser<A> {
     term()
-        .ands(move || many1(move || pchar(op).thens(term)))
-        .map(move |(first, rest)| rest.into_iter().fold(first, folder))
+        .and(move || many(move || op().and(term)))
+        .map(|(first, rest)| rest.into_iter().fold(first, |acc, (f, rhs)| f(acc, rhs)))
 }
 
-fn padd() -> Parser<Aexpr> {
-    chain_left(p_ae2, '+', |a, b| Aexpr::Add(Box::new(a), Box::new(b)))
-}
-
-fn psub() -> Parser<Aexpr> {
-    p_ae2()
-        .ands(|| many1(|| pchar('-').thens(p_ae2)))
-        .map(|(first, rest)| {
-            rest.into_iter()
-                .fold(first, |acc, expr| Aexpr::Sub(Box::new(acc), Box::new(expr)))
-        })
+fn add_sub_op() -> Parser<Box<dyn Fn(Aexpr, Aexpr) -> Aexpr>> {
+    choice(
+        [
+            || {
+                pchar('+').map(|_| {
+                    Box::new(|a, b| Aexpr::Add(Box::new(a), Box::new(b)))
+                        as Box<dyn Fn(Aexpr, Aexpr) -> Aexpr>
+                })
+            },
+            || {
+                pchar('-').map(|_| {
+                    Box::new(|a, b| Aexpr::Sub(Box::new(a), Box::new(b)))
+                        as Box<dyn Fn(Aexpr, Aexpr) -> Aexpr>
+                })
+            },
+        ]
+        .to_vec(),
+    )
 }
 
 fn p_ae1() -> Parser<Aexpr> {
-    choice([padd, psub, p_ae2].to_vec())
+    chain_left(p_ae2, add_sub_op)
 }
 
 // Precedence 2:
