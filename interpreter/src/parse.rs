@@ -38,19 +38,6 @@ impl<T: 'static, U: 'static> IgnoreWhitespace<T, U> for Parser<T> {
     }
 }
 
-fn pbinop<T, U, S>(
-    op: impl ParseClosure<T>,
-    a: impl ParseClosure<U>,
-    b: impl ParseClosure<S>,
-) -> Parser<(U, S)>
-where
-    T: 'static,
-    U: 'static,
-    S: 'static,
-{
-    a().befores(op).ands(b)
-}
-
 fn between<T, U, S>(
     left: impl ParseClosure<T>,
     right: impl ParseClosure<U>,
@@ -62,6 +49,23 @@ where
     S: 'static,
 {
     left().thens(mid).befores(right)
+}
+
+fn chain_left<T, F>(term: impl ParseClosure<T> + Copy, op: impl ParseClosure<F> + Copy) -> Parser<T>
+where
+    T: 'static,
+    F: Fn(T, T) -> T + 'static,
+{
+    term()
+        .and(move || many(move || spaces().then(op).ands(term)))
+        .map(|(first, rest)| {
+            rest.into_iter()
+                .fold(first, |acc, (merge_fn, next)| merge_fn(acc, next))
+        })
+}
+
+fn binop<T: 'static>(ch: char, constructor: fn(Box<T>, Box<T>) -> T) -> Parser<impl Fn(T, T) -> T> {
+    pchar(ch).map(move |_| move |a, b| constructor(Box::new(a), Box::new(b)))
 }
 
 fn pid() -> Parser<String> {
@@ -93,30 +97,26 @@ fn patomic() -> Parser<Atomic> {
 
 // Precedence 1:
 
-fn padd() -> Parser<Aexpr> {
-    pbinop(|| pchar('+'), p_ae2, p_ae1).map(|(a, b)| Aexpr::Add(Box::new(a), Box::new(b)))
-}
-
-fn psub() -> Parser<Aexpr> {
-    pbinop(|| pchar('-'), p_ae2, p_ae1).map(|(a, b)| Aexpr::Sub(Box::new(a), Box::new(b)))
+fn paddsub() -> Parser<Aexpr> {
+    chain_left(p_ae2, || {
+        choice([|| binop('+', Aexpr::Add), || binop('-', Aexpr::Sub)].to_vec())
+    })
 }
 
 fn p_ae1() -> Parser<Aexpr> {
-    choice([padd, psub, p_ae2].to_vec())
+    choice([paddsub, p_ae2].to_vec())
 }
 
 // Precedence 2:
 
-fn pmul() -> Parser<Aexpr> {
-    pbinop(|| pchar('*'), p_ae3, p_ae2).map(|(a, b)| Aexpr::Mul(Box::new(a), Box::new(b)))
-}
-
-fn pdiv() -> Parser<Aexpr> {
-    pbinop(|| pchar('/'), p_ae3, p_ae2).map(|(a, b)| Aexpr::Div(Box::new(a), Box::new(b)))
+fn pmuldiv() -> Parser<Aexpr> {
+    chain_left(p_ae3, || {
+        choice([|| binop('*', Aexpr::Mul), || binop('/', Aexpr::Div)].to_vec())
+    })
 }
 
 fn p_ae2() -> Parser<Aexpr> {
-    choice([pmul, pdiv, p_ae3].to_vec())
+    choice([pmuldiv, p_ae3].to_vec())
 }
 
 // Precedence 3:
@@ -146,7 +146,7 @@ fn p_ae3() -> Parser<Aexpr> {
 // Full arithmetic expression
 
 fn paexpr() -> Parser<Aexpr> {
-    choice([p_ae1, p_ae2, p_ae3].to_vec())
+    p_ae1()
 }
 
 /* === Statements === */
@@ -154,13 +154,17 @@ fn paexpr() -> Parser<Aexpr> {
 // Precedence 1:
 
 fn psequence() -> Parser<Statement> {
-    pbinop(|| pchar(';'), p_stmnt2, p_stmnt1).map(|(a, b)| match b {
-        Statement::Sequence(mut queue) => {
-            queue.push_front(a);
-            Statement::Sequence(queue)
+    fn merge_sequence(a: Statement, b: Statement) -> Statement {
+        match a {
+            Statement::Sequence(mut queue) => {
+                queue.push_back(b);
+                Statement::Sequence(queue)
+            }
+            _ => Statement::Sequence(VecDeque::from([a, b])),
         }
-        _ => Statement::Sequence(VecDeque::from([a, b])),
-    })
+    }
+
+    chain_left(p_stmnt2, || pchar(';').map(|_| merge_sequence))
 }
 
 fn p_stmnt1() -> Parser<Statement> {
@@ -192,7 +196,7 @@ fn p_stmnt2() -> Parser<Statement> {
 // Full statement
 
 fn pstatement() -> Parser<Statement> {
-    choice([p_stmnt1, p_stmnt2].to_vec())
+    p_stmnt1()
 }
 
 /* === Full AST parser === */
