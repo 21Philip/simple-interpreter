@@ -51,10 +51,11 @@ where
     left().thens(mid).befores(right)
 }
 
-fn chain_left<T: 'static>(
-    term: impl ParseClosure<T> + Copy,
-    op: impl ParseClosure<fn(T, T) -> T> + Copy,
-) -> Parser<T> {
+fn chain_left<T, F>(term: impl ParseClosure<T> + Copy, op: impl ParseClosure<F> + Copy) -> Parser<T>
+where
+    T: 'static,
+    F: Fn(T, T) -> T + 'static,
+{
     term()
         .and(move || many(move || spaces().then(op).ands(term)))
         .map(|(first, rest)| {
@@ -63,8 +64,8 @@ fn chain_left<T: 'static>(
         })
 }
 
-fn binop<T: 'static>(ch: char, f: fn(T, T) -> T) -> Parser<fn(T, T) -> T> {
-    pchar(ch).map(move |_| f)
+fn binop<T: 'static>(ch: char, constructor: fn(Box<T>, Box<T>) -> T) -> Parser<impl Fn(T, T) -> T> {
+    pchar(ch).map(move |_| move |a, b| constructor(Box::new(a), Box::new(b)))
 }
 
 fn pid() -> Parser<String> {
@@ -98,13 +99,7 @@ fn patomic() -> Parser<Atomic> {
 
 fn paddsub() -> Parser<Aexpr> {
     chain_left(p_ae2, || {
-        choice(
-            [
-                || binop('+', |a, b| Aexpr::Add(Box::new(a), Box::new(b))),
-                || binop('-', |a, b| Aexpr::Sub(Box::new(a), Box::new(b))),
-            ]
-            .to_vec(),
-        )
+        choice([|| binop('+', Aexpr::Add), || binop('-', Aexpr::Sub)].to_vec())
     })
 }
 
@@ -116,13 +111,7 @@ fn p_ae1() -> Parser<Aexpr> {
 
 fn pmuldiv() -> Parser<Aexpr> {
     chain_left(p_ae3, || {
-        choice(
-            [
-                || binop('*', |a, b| Aexpr::Mul(Box::new(a), Box::new(b))),
-                || binop('/', |a, b| Aexpr::Div(Box::new(a), Box::new(b))),
-            ]
-            .to_vec(),
-        )
+        choice([|| binop('*', Aexpr::Mul), || binop('/', Aexpr::Div)].to_vec())
     })
 }
 
@@ -175,9 +164,7 @@ fn psequence() -> Parser<Statement> {
         }
     }
 
-    chain_left(p_stmnt2, move || {
-        pchar(';').map(move |_| merge_sequence as fn(_, _) -> _)
-    })
+    chain_left(p_stmnt2, || pchar(';').map(|_| merge_sequence))
 }
 
 fn p_stmnt1() -> Parser<Statement> {
