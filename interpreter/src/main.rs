@@ -4,7 +4,7 @@ use interpreter::eval::statement_eval;
 use interpreter::parse::parse_ast;
 
 fn main() {
-    let input = "let x = 1+2-3; print x;";
+    let input = "let x = 1+2*3-4; print x;";
 
     let ast = match parse_ast(input) {
         Ok(ast) => ast,
